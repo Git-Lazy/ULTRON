@@ -1,0 +1,28 @@
+
+
+services:
+  model:
+    build: ./model
+    ports:
+      - "8000:8000"
+    networks:
+      - ultron
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - ultron
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    networks:
+      - ultron
+
+
+networks:  
+  ultron:
+    driver: bridge
