@@ -42,4 +42,17 @@ for idx, image in enumerate(images):
     for folderName in folderNames:
         if idx <= lastImageIndexes[folderName]:
             save_image(transforms.ToTensor()(image), f"dataset_images/{folderName}/image_{idx}.png")
-    
+
+
+# delete the original dataset
+for file in Path("dataset/").iterdir():
+    if not file.is_file():
+        if file.is_dir():
+            for image in file.iterdir():
+                if not image.is_file():
+                    continue
+                image.unlink()
+            file.rmdir()
+        continue
+    file.unlink()
+Path("dataset/").rmdir()
