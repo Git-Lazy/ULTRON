@@ -40,7 +40,7 @@ for idx, image in enumerate(images):
             if not Path(f"./dataset_images/{folderName}").exists():
                 Path(f"./dataset_images/{folderName}").mkdir(parents=True, exist_ok=True)
     for folderName in folderNames:
-        if idx <= lastImageIndexes[folderName]:
+        if idx <= lastImageIndexes[folderName] and idx > lastImageIndexes[folderNames[folderNames.index(folderName) - 1]]:
             save_image(transforms.ToTensor()(image), f"dataset_images/{folderName}/image_{idx}.png")
 
 
