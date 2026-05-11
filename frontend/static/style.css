@@ -1,0 +1,135 @@
+:root {
+    --bg: #0a0a0f;
+    --bg-accent: #1a0f1f;
+    --fg: #f0f0f5;
+    --accent: #c8102e;
+    --accent-glow: rgba(200, 16, 46, 0.6);
+    --muted: #8a8a95;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: radial-gradient(ellipse at center, var(--bg-accent) 0%, var(--bg) 70%);
+    color: var(--fg);
+    overflow: hidden;
+}
+
+.grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(200, 16, 46, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200, 16, 46, 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    pointer-events: none;
+}
+
+main {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 2rem;
+}
+
+.orb {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 2.5rem;
+}
+
+.orb-core {
+    position: absolute;
+    inset: 35%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ff4060, var(--accent) 60%, #4a0010);
+    box-shadow:
+        0 0 20px var(--accent-glow),
+        0 0 40px var(--accent-glow),
+        0 0 80px var(--accent-glow);
+    animation: pulse 2.4s ease-in-out infinite;
+}
+
+.orb-ring {
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(200, 16, 46, 0.4);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 4s linear infinite;
+}
+
+.orb-ring--alt {
+    inset: 15%;
+    border: 1px solid rgba(200, 16, 46, 0.25);
+    border-bottom-color: var(--accent);
+    animation: spin 6s linear infinite reverse;
+}
+
+h1 {
+    font-size: 4rem;
+    font-weight: 300;
+    letter-spacing: 0.5rem;
+    margin: 0 0 0.5rem;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #fff 0%, #c8102e 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.tagline {
+    margin: 0 0 2.5rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+    letter-spacing: 0.2rem;
+    text-transform: uppercase;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(200, 16, 46, 0.3);
+    border-radius: 999px;
+    background: rgba(200, 16, 46, 0.05);
+    font-size: 0.8rem;
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 8px #4ade80;
+    animation: blink 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.9; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
