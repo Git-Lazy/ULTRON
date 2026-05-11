@@ -430,9 +430,16 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+<<<<<<< HEAD
 
 
 # Ignored files important to us
 modelTraining/trainingData
 venv
 .idea
+=======
+#stuff we ignore
+.idea
+modelTraining/trainingData
+venv
+>>>>>>> b1bc03d (added file for converting images to tensors and converted training set into pkl file)
