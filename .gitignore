@@ -427,3 +427,8 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+#stuff we ignore
+.idea
+modelTraining/trainingData
+venv
