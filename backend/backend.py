@@ -26,10 +26,32 @@ def delete_class_name(class_name):
     delete_example_images_for_class(class_name)
     
 def delete_example_images_for_class(class_name):
-    pass
+    example_images_folder = Path(f"examples/{class_name}")
+    if example_images_folder.exists() and example_images_folder.is_dir():
+        delete_folder(example_images_folder)
 
 def add_example_image(example_path, class_name):
-    pass
+    if class_name not in class_names:
+        raise ValueError(f"Class name '{class_name}' does not exist.")
+    else:
+        copy_image(example_path, f"examples/{class_name}")
+
+def search_images(query):
+    found_images_paths = []
+    for folderName in class_names:
+        if query.lower() in folderName.lower():
+            for image in Path(f"sorted_images/{folderName}").iterdir():
+                if not image.is_file():
+                    continue
+                found_images_paths.append(str(image))
+        else:
+            for image in Path(f"sorted_images/{folderName}").iterdir():
+                if not image.is_file():
+                    continue
+                tags = get_image_tags(image)
+                if query.lower() in image.name.lower() or query.lower() in str(tags).lower():
+                    found_images_paths.append(str(image))
+    return found_images_paths
 
 def delete_folder(folder_path):
     shutil.rmtree(folder_path)
@@ -42,11 +64,16 @@ def move_image(source_file_path, destination_path):
     source_file = Path(source_file_path)
     if source_file.is_file():
         shutil.move(str(source_file), str(Path(destination_path) / source_file.name))
+        
+def copy_image(source_file_path, destination_path):
+    source_file = Path(source_file_path)
+    if source_file.is_file():
+        shutil.copy(str(source_file), str(Path(destination_path) / source_file.name))
 
 def get_image_tags(image_path):
     metadata = pyexiv2.ImageMetadata(image_path)
-    metadata.read()
-    return metadata
+    keywords = metadata.get('Iptc.Application2.Keywords')
+    return keywords.value if keywords is not None else []
 
 def set_image_tags(image_path, tags):
     metadata = pyexiv2.ImageMetadata(image_path)
