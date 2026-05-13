@@ -1,4 +1,4 @@
-import torch
+from torch.nn import functional as F
 from torch import nn
 
 
@@ -36,4 +36,4 @@ class Model(nn.Module):
         self.steps = nn.Sequential(*steps)
 
     def forward(self, x):
-        return self.steps(x)
+        return F.normalize(self.steps(x), p=2, dim=1)
