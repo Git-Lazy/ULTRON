@@ -13,6 +13,23 @@ class_names = []
 def set_class_names(class_names_list):
     global class_names
     class_names = class_names_list
+    
+def add_class_name(class_name):
+    global class_names
+    if class_name not in class_names:
+        class_names.append(class_name)
+
+def delete_class_name(class_name):
+    global class_names
+    if class_name in class_names:
+        class_names.remove(class_name)
+    delete_example_images_for_class(class_name)
+    
+def delete_example_images_for_class(class_name):
+    pass
+
+def add_example_image(example_path, class_name):
+    pass
 
 def delete_folder(folder_path):
     shutil.rmtree(folder_path)
@@ -61,6 +78,14 @@ def get_class_names_from_model(unsorted_folder_path):
             continue
     return images
 
+def create_sorted_images_folder():
+    create_folder("sorted_images")
+    for folderName in class_names:
+        create_folder(f"sorted_images/{folderName}")
+        
+def move_images_to_sorted_folder(images):
+    for image, folderName in images:
+        move_image(image, f"sorted_images/{folderName}")
 
 # will delete this once connected to the model api
 images = list()
@@ -81,11 +106,8 @@ for file in Path("dataset/").iterdir():
     
     
 
-create_folder("sorted_images")
-for folderName in folderNames:
-    create_folder(f"sorted_images/{folderName}")
 
-for image, folderName in images:
-    move_image(image, f"sorted_images/{folderName}")
+
+
 
 
