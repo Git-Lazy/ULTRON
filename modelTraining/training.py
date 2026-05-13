@@ -89,7 +89,7 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, save_path="mo
 
             total_loss += loss.item()
         total_correct = 0
-        total_correct_loose = 0
+        total_correct_high = 0
         total_similarity_match = 0
         total_similar = 0
         total_similarity_diff = 0
@@ -105,9 +105,9 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, save_path="mo
                 isMatch = classes[:, 0] == classes[:, 1]
 
                 predictions = similarity > 0.7
-                predictions_loose = similarity > 0.4
+                predictions_high = similarity > 0.8
                 total_correct += torch.sum(predictions == isMatch).item()
-                total_correct_loose += torch.sum(predictions_loose == isMatch).item()
+                total_correct_high += torch.sum(predictions_high == isMatch).item()
 
                 total_similar += torch.sum(isMatch).item()
                 total_opposing += torch.sum(~isMatch).item()
@@ -124,7 +124,7 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, save_path="mo
         print(f"    looseOpposingTrue {looseOpposingTrue / 10000:.4f}")
         print("Testing Metrics:")
         print(f"    accuracy {total_correct / 1000:.4f}")
-        print(f"    accuracy loose {total_correct_loose / 1000:.4f}")
+        print(f"    accuracy high {total_correct_high / 1000:.4f}")
         print(f"    avg similarity match {total_similarity_match / total_similar:.4f}")
         print(f"    avg similarity diff {total_similarity_diff / total_opposing:.4f}")
         print()
@@ -132,6 +132,6 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, save_path="mo
 
 if __name__ == "__main__":
     model = Model()
-    model.load_state_dict(torch.load("72_Accuracy.pth"))
+    #model.load_state_dict(torch.load("model_continued.pth"))
     loss_fn = torch.nn.TripletMarginLoss(margin=1)
-    train_two_electric_boggalo(100, model, loss_fn, "trainingData/convertedDataset.pkl", save_path="model_continued.pth")
+    train_two_electric_boggalo(100, model, loss_fn, "trainingData/convertedDataset.pkl", save_path="fresh_model.pth")
