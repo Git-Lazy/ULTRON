@@ -12,6 +12,7 @@
 *.env
 dataset/
 dataset_images/
+sorted_images/
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
