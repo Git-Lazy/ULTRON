@@ -63,11 +63,15 @@ def create_folder(folder_path):
 def move_image(source_file_path, destination_path):
     source_file = Path(source_file_path)
     if source_file.is_file():
+        if not Path(destination_path).exists():
+            Path(destination_path).mkdir(parents=True, exist_ok=True)
         shutil.move(str(source_file), str(Path(destination_path) / source_file.name))
         
 def copy_image(source_file_path, destination_path):
     source_file = Path(source_file_path)
     if source_file.is_file():
+        if not Path(destination_path).exists():
+            Path(destination_path).mkdir(parents=True, exist_ok=True)
         shutil.copy(str(source_file), str(Path(destination_path) / source_file.name))
 
 def get_image_tags(image_path):
@@ -131,7 +135,8 @@ for file in Path("dataset/").iterdir():
                 lastImageIndexes[currentFolderName] += 1
         continue
     
-    
+move_images_to_sorted_folder(images)
+delete_folder("dataset")
 
 
 
