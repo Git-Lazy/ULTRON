@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
+*.venv
 dataset/
 dataset_images/
 sorted_images/
