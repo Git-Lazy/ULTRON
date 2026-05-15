@@ -1,8 +1,8 @@
 import zipfile
 import os
 
-zip_path = "trainingData/archive(5).zip"  # path to your zip
-output_dir = "trainingData/dataset5"     # where to extract
+zip_path = "trainingData/archive(6).zip"  # path to your zip
+output_dir = "trainingData/dataset6"     # where to extract
 
 MAX_PATH = 200  # adjust if needed
 
