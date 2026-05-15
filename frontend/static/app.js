@@ -115,6 +115,7 @@ async function saveCustomClass() {
     state.selectedClass = name;
 
     setStatus('Saving class...');
+    
     try {
         const form = new FormData();
         form.append('name', name);
