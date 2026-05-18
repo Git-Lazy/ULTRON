@@ -1,4 +1,4 @@
-import backend
+import backend.backend as backend
 import fastapi
 import uvicorn
 from dotenv import load_dotenv
