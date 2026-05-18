@@ -9,7 +9,7 @@ import os
 from fastapi import FastAPI, File, UploadFile, responses
 import torch
 import io
-
+from typing import List
 
 
 class ResizeWithPad:
@@ -105,20 +105,19 @@ async def predict(file: UploadFile = File(...)):
         print(e)
         return responses.JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.post("/predict_one")
-async def predict(file: UploadFile = File(...)):
+@app.post("/predict_many")
+async def predict(files: List[UploadFile] = File(...)):
     try:
-        if not file.content_type.startswith("image/"):
-            raise ValueError("Invalid file type")
-        print("file content type: ", file.content_type)
-        content = await file.read()
-        print("got content:")
-        image = Image.open(io.BytesIO(content)).convert("RGB")
-        print("opened image:")
-        image = transform(image)
-        print("transformed image:")
-        print(image.shape)
-        embedding = model(image)
+        input_vectors = numpy.zeros((len(files), 3, 128, 128))
+        for i, file in enumerate(files):
+            if not file.content_type.startswith("image/"):
+                raise ValueError("Invalid file type")
+            content = await file.read()
+            image = Image.open(io.BytesIO(content)).convert("RGB")
+            image = transform(image)
+            input_vectors[i] = image
+        print("input shape: ", input_vectors.shape)
+        embedding = model(input_vectors)
         print("got embedding:")
         return embedding.tolist()
     except Exception as e:
