@@ -30,6 +30,23 @@ def delete_example_images_for_class(class_name):
     if example_images_folder.exists() and example_images_folder.is_dir():
         delete_folder(example_images_folder)
 
+def get_example_images():
+    """Get all example images organized by class name."""
+    examples = {}
+    examples_folder = Path("examples")
+    if not examples_folder.exists():
+        return examples
+    
+    for class_folder in examples_folder.iterdir():
+        if class_folder.is_dir():
+            class_name = class_folder.name
+            examples[class_name] = []
+            for image_file in class_folder.iterdir():
+                if image_file.is_file():
+                    examples[class_name].append(str(image_file))
+    
+    return examples
+
 def add_example_image(example_path, class_name):
     if class_name not in class_names:
         raise ValueError(f"Class name '{class_name}' does not exist.")
@@ -119,24 +136,28 @@ def move_images_to_sorted_folder(images):
         move_image(image, f"sorted_images/{folderName}")
 
 # will delete this once connected to the model api
-images = list()
-folderNames = [f.name for f in Path("dataset/").iterdir() if f.is_dir()]
-lastImageIndexes = {folderName: -1 for folderName in folderNames}
-for file in Path("dataset/").iterdir():
-    if not file.is_file():
-        if file.is_dir():
-            currentFolderName = file.name
-            # set last index to the last index of the previous folder
-            lastImageIndexes[currentFolderName] = lastImageIndexes[folderNames[folderNames.index(currentFolderName) - 1]]
-            for image in file.iterdir():
-                if not image.is_file():
-                    continue
-                images.append((image, currentFolderName))
-                lastImageIndexes[currentFolderName] += 1
-        continue
-    
-move_images_to_sorted_folder(images)
-delete_folder("dataset")
+try:
+    images = list()
+    folderNames = [f.name for f in Path("dataset/").iterdir() if f.is_dir()]
+    lastImageIndexes = {folderName: -1 for folderName in folderNames}
+    for file in Path("dataset/").iterdir():
+        if not file.is_file():
+            if file.is_dir():
+                currentFolderName = file.name
+                # set last index to the last index of the previous folder
+                lastImageIndexes[currentFolderName] = lastImageIndexes[folderNames[folderNames.index(currentFolderName) - 1]]
+                for image in file.iterdir():
+                    if not image.is_file():
+                        continue
+                    images.append((image, currentFolderName))
+                    lastImageIndexes[currentFolderName] += 1
+            continue
+        
+    move_images_to_sorted_folder(images)
+    delete_folder("dataset")
+except FileNotFoundError:
+    # dataset/ directory doesn't exist yet, skip initialization
+    pass
 
 
 

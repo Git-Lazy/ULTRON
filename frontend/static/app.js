@@ -61,6 +61,18 @@ function renderClassList() {
     }
 }
 
+async function pingBackend() {
+    try {
+        const res = await fetch(`${API_BASE}/api-key`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setStatus(`Connected · API key: ${data.api_key}`);
+    } catch (err) {
+        console.error(err);
+        setStatus('Backend unreachable', false);
+    }
+}
+
 async function loadPremadeClasses() {
     try {
         const res = await fetch(`${API_BASE}/api/classes`);
@@ -227,4 +239,5 @@ async function handleSearch() {
 }
 
 renderClassList();
+pingBackend();
 loadPremadeClasses();

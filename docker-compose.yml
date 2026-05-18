@@ -4,7 +4,7 @@ services:
   model:
     build: ./model
     ports:
-      - "8000:8000"
+      - "8001:8000"
     networks:
       - ultron
 
@@ -14,13 +14,17 @@ services:
       - "3000:3000"
     networks:
       - ultron
+    environment:
+      - BACKEND_URL=http://backend:8000
 
   backend:
     build: ./backend
     ports:
-      - "5000:5000"
+      - "8000:8000"
     networks:
       - ultron
+    environment:
+      - MODEL_SERVICE_URL=http://model:8000
 
 
 networks:  
