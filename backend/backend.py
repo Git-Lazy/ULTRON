@@ -35,6 +35,16 @@ def add_example_image(example_path, class_name):
         raise ValueError(f"Class name '{class_name}' does not exist.")
     else:
         copy_image(example_path, f"examples/{class_name}")
+        metadata = pyexiv2.ImageMetadata(f"examples/{class_name}/{Path(example_path).name}")
+        metadata.read()
+        # TODO: set the class name and tags from the model prediction through the api call to the model server
+        metadata['Iptc.Application2.vector'] = "example"
+        metadata.write()
+
+def get_example_image_data(example_path):
+    metadata = pyexiv2.ImageMetadata(example_path)
+    vector = metadata.get('Iptc.Application2.vector')
+    return vector.value if vector is not None else []
 
 def search_images(query):
     found_images_paths = []
