@@ -200,20 +200,101 @@ h1 {
     color: var(--muted);
 }
 
+.upload-section {
+    position: relative;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(200, 16, 46, 0.18);
+    background: rgba(200, 16, 46, 0.025);
+}
+
 .upload-section + .upload-section {
-    margin-top: 1.5rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid rgba(200, 16, 46, 0.15);
+    margin-top: 1.25rem;
+}
+
+.upload-section--training {
+    border-left: 3px solid rgba(200, 16, 46, 0.45);
+    background:
+        linear-gradient(90deg, rgba(200, 16, 46, 0.06) 0%, rgba(200, 16, 46, 0.02) 30%);
+}
+
+.upload-section--model {
+    border: 1px solid rgba(200, 16, 46, 0.45);
+    background: rgba(200, 16, 46, 0.07);
+    box-shadow: 0 0 18px rgba(200, 16, 46, 0.08) inset;
 }
 
 .subsection-title {
-    margin: 0 0 0.75rem;
-    font-size: 0.7rem;
-    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 500;
     letter-spacing: 0.3rem;
     text-transform: uppercase;
     color: var(--accent);
-    opacity: 0.85;
+}
+
+.section-hint {
+    margin: 0 0 0.9rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.05rem;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+.step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    background: rgba(200, 16, 46, 0.15);
+    font-size: 0.7rem;
+    letter-spacing: 0;
+    color: var(--fg);
+    font-weight: 500;
+}
+
+.form-header {
+    font-size: 0.65rem;
+    letter-spacing: 0.3rem;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.form-error {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: rgba(200, 16, 46, 0.12);
+    color: var(--fg);
+    font-size: 0.7rem;
+    letter-spacing: 0.1rem;
+}
+
+#custom-class-examples-display {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(200, 16, 46, 0.15);
+}
+
+#custom-class-examples-display .field-label {
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+}
+
+#custom-class-examples-display #selected-class-name {
+    color: var(--fg);
+    text-transform: none;
+    letter-spacing: 0.05rem;
+}
+
+#output-results-display .field-label {
+    margin-bottom: 0.5rem;
 }
 
 .class-selector {
@@ -379,6 +460,37 @@ h1 {
 
 .upload-zone--small {
     height: 64px;
+}
+
+.upload-zone--training {
+    border: 1px dashed rgba(200, 16, 46, 0.35);
+    background: rgba(200, 16, 46, 0.025);
+}
+
+.upload-zone--training .upload-hint::before {
+    content: "+ ";
+    color: var(--accent);
+}
+
+.upload-zone--model {
+    height: 112px;
+    border: 2px solid var(--accent);
+    border-style: solid;
+    background:
+        linear-gradient(180deg, rgba(200, 16, 46, 0.12) 0%, rgba(200, 16, 46, 0.04) 100%);
+    color: var(--fg);
+    box-shadow: 0 0 14px rgba(200, 16, 46, 0.15) inset;
+}
+
+.upload-zone--model:hover {
+    background:
+        linear-gradient(180deg, rgba(200, 16, 46, 0.2) 0%, rgba(200, 16, 46, 0.08) 100%);
+    box-shadow: 0 0 18px var(--accent-glow), 0 0 14px rgba(200, 16, 46, 0.2) inset;
+}
+
+.upload-zone--model .upload-hint {
+    color: var(--fg);
+    font-weight: 500;
 }
 
 .upload-hint {

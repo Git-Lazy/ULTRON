@@ -1,4 +1,7 @@
 import fastapi
+from fastapi import UploadFile, File, Form
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
@@ -62,10 +65,26 @@ def search_items(query: str):
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/classes")
-def create_class(class_name: str):
+async def create_class(name: str = Form(...), examples: list[UploadFile] | None = File(None)):
     try:
-        backend.add_class_name(class_name)
-        return fastapi.responses.JSONResponse(status_code=201, content={"name": class_name})
+        # register class name
+        backend.add_class_name(name)
+
+        # determine repository-root examples folder based on backend module location
+        base_dir = Path(backend.__file__).parent
+        examples_dir = base_dir / "examples" / name
+        examples_dir.mkdir(parents=True, exist_ok=True)
+
+        saved = []
+        if examples:
+            for upload in examples:
+                dest = examples_dir / upload.filename
+                with dest.open("wb") as f:
+                    content = await upload.read()
+                    f.write(content)
+                saved.append(str(dest))
+
+        return fastapi.responses.JSONResponse(status_code=201, content={"name": name, "saved": saved})
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
     
@@ -85,6 +104,25 @@ def delete_class(class_name: str):
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
+
+@app.get("/api/examples/{class_name}/{filename}")
+def get_example_image(class_name: str, filename: str):
+    """Serve example images for custom classes."""
+    try:
+        base_dir = Path(backend.__file__).parent
+        file_path = base_dir / "examples" / class_name / filename
+        
+        # Security: prevent directory traversal
+        examples_base = (base_dir / "examples").resolve()
+        if not str(file_path.resolve()).startswith(str(examples_base)):
+            return JSONResponse(status_code=403, content={"error": "Access denied"})
+        
+        if not file_path.exists():
+            return JSONResponse(status_code=404, content={"error": "File not found"})
+        
+        return FileResponse(file_path)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.post("/predict")

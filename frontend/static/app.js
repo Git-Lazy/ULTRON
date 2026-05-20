@@ -56,9 +56,55 @@ function renderClassList() {
         chip.onclick = () => {
             state.selectedClass = state.selectedClass === cls.name ? null : cls.name;
             renderClassList();
+            renderCustomClassExamples();
         };
         list.insertBefore(chip, addBtn);
     }
+}
+
+function renderCustomClassExamples() {
+    const displayDiv = document.getElementById('custom-class-examples-display');
+    const grid = document.getElementById('custom-class-examples-grid');
+    const nameLabel = document.getElementById('selected-class-name');
+
+    grid.innerHTML = '';
+
+    if (!state.selectedClass) {
+        displayDiv.hidden = true;
+        return;
+    }
+
+    const customClass = state.customClasses.find(c => c.name === state.selectedClass);
+
+    if (!customClass || !customClass.examplePaths || customClass.examplePaths.length === 0) {
+        displayDiv.hidden = true;
+        return;
+    }
+
+    displayDiv.hidden = false;
+    if (nameLabel) nameLabel.textContent = customClass.name;
+
+    for (const filePath of customClass.examplePaths) {
+        const img = document.createElement('img');
+        const filename = filePath.split(/[\\/]/).pop();
+        img.src = `${API_BASE}/api/examples/${encodeURIComponent(customClass.name)}/${encodeURIComponent(filename)}`;
+        img.className = 'thumb';
+        img.alt = filename;
+        img.onerror = () => { img.alt = `Failed to load ${filename}`; };
+        grid.appendChild(img);
+    }
+}
+
+function showCustomClassError(message) {
+    const errorDiv = document.getElementById('custom-class-error');
+    if (!errorDiv) return;
+    if (!message) {
+        errorDiv.hidden = true;
+        errorDiv.textContent = '';
+        return;
+    }
+    errorDiv.textContent = message;
+    errorDiv.hidden = false;
 }
 
 async function pingBackend() {
@@ -66,7 +112,7 @@ async function pingBackend() {
         const res = await fetch(`${API_BASE}/api-key`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setStatus(`Connected · API key: ${data.api_key}`);
+        setStatus("Connected");
     } catch (err) {
         console.error(err);
         setStatus('Backend unreachable', false);
@@ -87,6 +133,28 @@ async function loadPremadeClasses() {
     }
 }
 
+async function loadSavedExamples() {
+    try {
+        const res = await fetch(`${API_BASE}/api/examples`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const examples = data.examples || {};
+        for (const [className, paths] of Object.entries(examples)) {
+            if (!paths || paths.length === 0) continue;
+            let entry = state.customClasses.find(c => c.name === className);
+            if (!entry) {
+                entry = { name: className, examples: [], examplePaths: [] };
+                state.customClasses.push(entry);
+            }
+            entry.examplePaths = paths;
+            state.premadeClasses = state.premadeClasses.filter(n => n !== className);
+        }
+        renderClassList();
+    } catch (_) {
+        // Backend not reachable yet.
+    }
+}
+
 function toggleCustomClassForm() {
     const form = document.getElementById('custom-class-form');
     form.hidden = !form.hidden;
@@ -104,6 +172,7 @@ function handleCustomClassExamples(event) {
         img.alt = file.name;
         grid.appendChild(img);
     }
+    if (state.pendingCustomExamples.length > 0) showCustomClassError(null);
     event.target.value = '';
 }
 
@@ -112,18 +181,32 @@ function cancelCustomClass() {
     document.getElementById('custom-class-images').innerHTML = '';
     state.pendingCustomExamples = [];
     document.getElementById('custom-class-form').hidden = true;
+    showCustomClassError(null);
 }
 
 async function saveCustomClass() {
     const nameInput = document.getElementById('custom-class-name');
     const name = nameInput.value.trim();
-    if (!name) {
+    const examples = state.pendingCustomExamples.slice();
+
+    if (!name && examples.length === 0) {
+        showCustomClassError('A class name and at least one example image are required.');
         nameInput.focus();
         return;
     }
-    const examples = state.pendingCustomExamples.slice();
+    if (!name) {
+        showCustomClassError('A class name is required.');
+        nameInput.focus();
+        return;
+    }
+    if (examples.length === 0) {
+        showCustomClassError('At least one example image is required.');
+        document.getElementById('custom-class-examples').focus();
+        return;
+    }
+    showCustomClassError(null);
 
-    state.customClasses.push({ name, examples });
+    state.customClasses.push({ name, examples: [], examplePaths: [] });
     state.selectedClass = name;
 
     setStatus('Saving class...');
@@ -137,6 +220,14 @@ async function saveCustomClass() {
             body: form
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        // Store the saved file paths in the custom class
+        const data = await res.json();
+        const customClass = state.customClasses.find(c => c.name === name);
+        if (customClass && data.saved) {
+            customClass.examplePaths = data.saved;
+        }
+        
         setStatus('System online');
     } catch (err) {
         console.error(err);
@@ -145,6 +236,7 @@ async function saveCustomClass() {
 
     cancelCustomClass();
     renderClassList();
+    renderCustomClassExamples();
 }
 
 async function handleImageUpload(event) {
@@ -240,4 +332,4 @@ async function handleSearch() {
 
 renderClassList();
 pingBackend();
-loadPremadeClasses();
+loadPremadeClasses().then(loadSavedExamples);

@@ -25,6 +25,7 @@ services:
       - ultron
     environment:
       - MODEL_SERVICE_URL=http://model:8000
+      - API_KEY=ultron-secret-key-12345 # Set a strong API key 
 
 
 networks:  

@@ -1,12 +1,12 @@
 import imageio.v3 as iio
 from pathlib import Path
-from torchvision.utils import save_image
-from torchvision import transforms
+# from torchvision.utils import save_image
+# from torchvision import transforms
 import pyexiv2
 import shutil
 
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader
+# from torchvision.datasets import ImageFolder
+# from torch.utils.data import DataLoader
 
 class_names = []
 
@@ -33,10 +33,10 @@ def delete_example_images_for_class(class_name):
 def get_example_images():
     """Get all example images organized by class name."""
     examples = {}
-    examples_folder = Path("examples")
+    examples_folder = Path(__file__).parent / "examples"
     if not examples_folder.exists():
         return examples
-    
+
     for class_folder in examples_folder.iterdir():
         if class_folder.is_dir():
             class_name = class_folder.name
@@ -44,7 +44,7 @@ def get_example_images():
             for image_file in class_folder.iterdir():
                 if image_file.is_file():
                     examples[class_name].append(str(image_file))
-    
+
     return examples
 
 def add_example_image(example_path, class_name):
