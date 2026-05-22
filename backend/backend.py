@@ -1,14 +1,16 @@
+import json
 import imageio.v3 as iio
 from pathlib import Path
-from torchvision.utils import save_image
-from torchvision import transforms
-import pyexiv2
 import shutil
+# import piexif
+import requests as http_requests
 
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader
+old_path = Path("dataset/")
+new_path = Path("sorted_images/")
 
-class_names = []
+
+
+class_names = ["bird", "certificate", "donkey", "forest", "horse"]
 
 def set_class_names(class_names_list):
     global class_names
@@ -35,16 +37,20 @@ def add_example_image(example_path, class_name):
         raise ValueError(f"Class name '{class_name}' does not exist.")
     else:
         copy_image(example_path, f"examples/{class_name}")
-        metadata = pyexiv2.ImageMetadata(f"examples/{class_name}/{Path(example_path).name}")
-        metadata.read()
-        # TODO: set the class name and tags from the model prediction through the api call to the model server
-        metadata['Iptc.Application2.vector'] = "example"
-        metadata.write()
+        dest_path = f"examples/{class_name}/{Path(example_path).name}"
+        
+        vector = get_prediction_from_model(example_path)
+        json_path = dest_path + ".json"
+        Path(json_path).write_text(json.dumps(vector))
 
 def get_example_image_data(example_path):
-    metadata = pyexiv2.ImageMetadata(example_path)
-    vector = metadata.get('Iptc.Application2.vector')
-    return vector.value if vector is not None else []
+    json_path = example_path + ".json"
+    if Path(json_path).exists():
+        vector = json.loads(Path(json_path).read_text())
+        return vector
+    print(f"No JSON file found for example image '{example_path}'. Returning None.")
+    exit(42)
+    return None
 
 def search_images(query):
     found_images_paths = []
@@ -85,26 +91,53 @@ def copy_image(source_file_path, destination_path):
         shutil.copy(str(source_file), str(Path(destination_path) / source_file.name))
 
 def get_image_tags(image_path):
-    metadata = pyexiv2.ImageMetadata(image_path)
-    keywords = metadata.get('Iptc.Application2.Keywords')
-    return keywords.value if keywords is not None else []
-
-def set_image_tags(image_path, tags):
-    metadata = pyexiv2.ImageMetadata(image_path)
-    metadata.read()
-    metadata['Iptc.Application2.Keywords'] = tags
-    metadata.write()
-    
-def get_image_class_name(image_path):
-    metadata = get_image_tags(image_path)
-    keywords = metadata.get('Iptc.Application2.Keywords')
-    if keywords is not None:
-        return keywords.value[0]
+    json_path = str(image_path) + ".json"
+    if Path(json_path).exists():
+        json_tags = Path(json_path).read_text()
+        tags = json.loads(json_tags)
+        return tags
     return None
 
-def get_class_name_from_model(image_path):
-    # TODO: implement this function to get the class name and tags from the model prediction through the api call to the model server
-    pass
+def set_image_tags(image_path):
+    vector = get_prediction_from_model(image_path)
+    weighted_cosine_similarity_scores = {}
+    for class_name in class_names:
+        weighted_cosine_similarity_scores[f'{class_name}'] = weighted_cosine_similarity(vector, [get_example_image_data(f"examples/{class_name}/{image.name}") for image in Path(f"examples/{class_name}").iterdir() if (image.is_file() and is_image_file(image))])
+    
+    json_tags = json.dumps(weighted_cosine_similarity_scores)
+    json_path = str(image_path) + ".json"
+    Path(json_path).write_text(json_tags)
+    
+def is_image_file(file_path):
+    return file_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp']
+
+
+def get_image_class_name(image_path):
+    json_path = str(image_path) + ".json"
+    if Path(json_path).exists():
+        json_tags = Path(json_path).read_text()
+        tags = json.loads(json_tags)
+    if tags is not None:
+        return max(tags, key=tags.get)  # return the class name with the highest weighted cosine similarity score
+    return None
+
+def get_prediction_from_model(image_path):
+    if not Path(image_path).is_file():
+        raise ValueError(f"Image path '{image_path}' does not exist or is not a file.")
+    elif not is_image_file(Path(image_path)):
+        print(f"File '{image_path}' is not a supported image format. Skipping prediction.")
+        return None
+    else:
+        try:
+            with open(image_path, "rb") as f:
+                response = http_requests.post(
+                    "http://localhost:8001/predict_one",
+                    files={"file": (Path(image_path).name, f, f"image/{Path(image_path).suffix[1:]}")}
+                )
+            # print(response.json())
+            return response.json()
+        except Exception as e:
+            print(f"Error calling model: {str(e)}")
 
 def get_class_names_from_model(unsorted_folder_path):
     # TODO: fix this function to get the class names from the model prediction through the api call to the model server
@@ -115,24 +148,54 @@ def get_class_names_from_model(unsorted_folder_path):
                 for image in file.iterdir():
                     if not image.is_file():
                         continue
-                    images.append((image, get_class_name_from_model(image)))
+                    if is_image_file(image):
+                        images.append((image, get_prediction_from_model(image)))
             continue
     return images
 
 def create_sorted_images_folder():
-    create_folder("sorted_images")
+    create_folder(str(new_path))
     for folderName in class_names:
-        create_folder(f"sorted_images/{folderName}")
+        create_folder(f"{new_path}/{folderName}")
         
 def move_images_to_sorted_folder(images):
     for image, folderName in images:
-        move_image(image, f"sorted_images/{folderName}")
+        if is_image_file(image):
+            # add_example_image(image, folderName)
+            set_image_tags(image)
+            most_likely_class_name = get_image_class_name(image)
+            if most_likely_class_name is not None:
+                move_image(image, f"{new_path}/{most_likely_class_name}")
+                move_image(str(image) + ".json", f"{new_path}/{most_likely_class_name}")
+            else:
+                move_image(image, f"{new_path}/{folderName}")
+                move_image(str(image) + ".json", f"{new_path}/{folderName}")
+
+def get_cosine_similarity(vec1, vec2):
+    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    magnitude_vec1 = sum(a ** 2 for a in vec1) ** 0.5
+    magnitude_vec2 = sum(b ** 2 for b in vec2) ** 0.5
+    if magnitude_vec1 == 0 or magnitude_vec2 == 0:
+        return 0.0
+    return dot_product / (magnitude_vec1 * magnitude_vec2)
+
+def weighted_cosine_similarity(vec, vec_list):
+    similarities = [get_cosine_similarity(vec, v) for v in vec_list]
+    total_similarity = sum(similarities)
+    if total_similarity == 0:
+        return [0] * len(vec_list)
+    weights = [s / total_similarity for s in similarities]
+    average_weighted_similarity = total_similarity*sum(weights) / len(vec_list)
+    return average_weighted_similarity
 
 # will delete this once connected to the model api
 images = list()
-folderNames = [f.name for f in Path("dataset/").iterdir() if f.is_dir()]
+if not Path("dataset/").exists():
+    old_path = Path("sorted_images/")
+    new_path = Path("dataset/")
+folderNames = [f.name for f in old_path.iterdir() if f.is_dir()]
 lastImageIndexes = {folderName: -1 for folderName in folderNames}
-for file in Path("dataset/").iterdir():
+for file in old_path.iterdir():
     if not file.is_file():
         if file.is_dir():
             currentFolderName = file.name
@@ -146,7 +209,7 @@ for file in Path("dataset/").iterdir():
         continue
     
 move_images_to_sorted_folder(images)
-delete_folder("dataset")
+delete_folder(str(old_path))
 
 
 
