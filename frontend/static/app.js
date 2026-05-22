@@ -112,7 +112,8 @@ async function pingBackend() {
         const res = await fetch(`${API_BASE}/api-key`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setStatus("Connected");
+        const key = data && data.api_key ? ` · API key (CHANGE MSG BEFORE USE): ${data.api_key}` : '';
+        setStatus(`Connected${key}`);
     } catch (err) {
         console.error(err);
         setStatus('Backend unreachable', false);
@@ -140,13 +141,13 @@ async function loadSavedExamples() {
         const data = await res.json();
         const examples = data.examples || {};
         for (const [className, paths] of Object.entries(examples)) {
-            if (!paths || paths.length === 0) continue;
+            // register class name but don't assume backend serves images
             let entry = state.customClasses.find(c => c.name === className);
             if (!entry) {
                 entry = { name: className, examples: [], examplePaths: [] };
                 state.customClasses.push(entry);
             }
-            entry.examplePaths = paths;
+            // Keep premadeClasses and customClasses separate
             state.premadeClasses = state.premadeClasses.filter(n => n !== className);
         }
         renderClassList();
@@ -206,32 +207,24 @@ async function saveCustomClass() {
     }
     showCustomClassError(null);
 
-    state.customClasses.push({ name, examples: [], examplePaths: [] });
+    // Convert example files to data URLs for local display
+    const dataUrls = await Promise.all(examples.map(f => readFileAsDataURL(f)));
+
+    const customEntry = { name, examples: dataUrls, examplePaths: [] };
+    state.customClasses.push(customEntry);
     state.selectedClass = name;
 
     setStatus('Saving class...');
-    
     try {
-        const form = new FormData();
-        form.append('name', name);
-        for (const file of examples) form.append('examples', file, file.name);
-        const res = await fetch(`${API_BASE}/api/classes`, {
-            method: 'POST',
-            body: form
+        // Inform backend about new class (no files)
+        const res = await fetch(`${API_BASE}/api/classes?class_name=${encodeURIComponent(name)}`, {
+            method: 'POST'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        
-        // Store the saved file paths in the custom class
-        const data = await res.json();
-        const customClass = state.customClasses.find(c => c.name === name);
-        if (customClass && data.saved) {
-            customClass.examplePaths = data.saved;
-        }
-        
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline', false);
+        setStatus('Backend offline (class saving issue: change)', false);
     }
 
     cancelCustomClass();
@@ -239,9 +232,18 @@ async function saveCustomClass() {
     renderCustomClassExamples();
 }
 
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 async function handleImageUpload(event) {
     const target = document.getElementById('uploaded-images');
-    const file = event.target.files[0];
+    const file = (event.target && event.target.files && event.target.files[0]) || (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
     if (!file) return;
 
     const img = document.createElement('img');
@@ -263,9 +265,9 @@ async function handleImageUpload(event) {
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline', false);
+        setStatus('Backend offline (image upload issue: change)', false);
     }
-    event.target.value = '';
+    if (event.target && 'value' in event.target) event.target.value = '';
 }
 
 async function handleFolderUpload(event) {
@@ -305,7 +307,7 @@ async function handleFolderUpload(event) {
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline', false);
+        setStatus('Backend offline (folder upload issue: change)', false);
     }
     event.target.value = '';
 }
@@ -326,7 +328,7 @@ async function handleSearch() {
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline', false);
+        setStatus('Backend offline (search issue: change)', false);
     }
 }
 
