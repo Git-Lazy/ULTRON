@@ -202,6 +202,6 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, test_path, sa
 
 if __name__ == "__main__":
     model = Model()
-    model.load_state_dict(torch.load("new_data_new.pth"))
+    model.load_state_dict(torch.load("models/gen2/new_data_new.pth"))
     loss_fn = torch.nn.TripletMarginLoss(margin=0.2)
-    train_two_electric_boggalo(100, model, loss_fn, "trainingData/newTraining.pkl", "trainingData/convertedDatasetTest.pkl", save_path="new_data_new_new.pth")
+    train_two_electric_boggalo(100, model, loss_fn, "trainingData/newTraining.pkl", "trainingData/convertedDatasetTest.pkl", save_path="models/gen2/new_data_new_new.pth")
