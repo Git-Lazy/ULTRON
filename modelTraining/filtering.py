@@ -66,7 +66,7 @@ def filterDirectory(directory, outputDirectory, model):
 def filterImages(classes_dir, source_dir, output_dir):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model()
-    model.load_state_dict(torch.load("models/gen2/new_data_new_new.pth"))
+    model.load_state_dict(torch.load("models/gen2/model_continued_new_new.pth"))
     classes = os.listdir(classes_dir)
     classExamples = {}
     os.makedirs(output_dir, exist_ok=True)
@@ -115,6 +115,6 @@ def filterImages(classes_dir, source_dir, output_dir):
 if __name__ == "__main__":
     print("Starting filtering...")
     model = Model()
-    model.load_state_dict(torch.load("models/gen2/new_data_new_new.pth"))
+    model.load_state_dict(torch.load("models/gen2/model_continued_new_new.pth"))
     # filterDirectory("trainingData/Glacier/actuallySorted", "trainingData/Glacier/actuallySortedForReal", model)
     filterImages("trainingData/recovered/seg_train/seg_train", "trainingData/recovered/seg_pred/seg_pred", "trainingData/sortedData")
