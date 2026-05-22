@@ -39,7 +39,7 @@ transform = transforms.Compose([
 
 
 
-def convert_imageset(path="trainingData/initialTraining", output_path="trainingData/convertedDataset.pkl"):
+def convert_imageset(path="trainingData/TrainingSet2", output_path="trainingData/newTraining.pkl"):
     classes = os.listdir(path)
     data = {
         "classes": classes,
@@ -68,7 +68,7 @@ def convert_imageset(path="trainingData/initialTraining", output_path="trainingD
 
 
 
-convert_imageset(path="trainingData/dataset6/data", output_path="trainingData/demoDataset.pkl")
+#convert_imageset(path="trainingData/TrainingSet2", output_path="trainingData/newTraining.pkl")
 #convert_imageset_test()
 
 # image = Image.open("trainingData/initialTraining/chole_bhature/006.jpg").convert("RGB")
@@ -81,5 +81,3 @@ convert_imageset(path="trainingData/dataset6/data", output_path="trainingData/de
 # print(tensor_normalized.shape)
 # tensor_resized = ResizeWithPad(128)(tensor_normalized)
 # print(tensor_resized.shape)
-
-
