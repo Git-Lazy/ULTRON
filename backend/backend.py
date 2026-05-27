@@ -87,13 +87,13 @@ def search_images(query):
                 if not image.is_file():
                     continue
                 found_images_paths.append(str(image))
-        else:
-            for image in Path(f"sorted_images/{folderName}").iterdir():
-                if not image.is_file():
-                    continue
-                tags = get_image_tags(image)
-                if query.lower() in image.name.lower() or query.lower() in str(tags).lower():
-                    found_images_paths.append(str(image))
+        # else:
+        #     for image in Path(f"sorted_images/{folderName}").iterdir():
+        #         if not image.is_file():
+        #             continue
+        #         tags = get_image_tags(image)
+        #         if query.lower() in image.name.lower() or query.lower() in str(tags).lower():
+        #             found_images_paths.append(str(image))
     return found_images_paths
 
 def delete_folder(folder_path):
