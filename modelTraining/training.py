@@ -90,7 +90,7 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, test_path, sa
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("training on ", device)
     model.to(device)
-    dataset = TripletDataset(torch.load(train_path), 10000)
+    dataset = TripletDataset(torch.load(train_path), 100000)
     num_classes = len(dataset.classes)
     print("dataset loaded")
     dataset_loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=0)
@@ -184,8 +184,8 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, test_path, sa
         reversed_training_distribution_similar = torch.nan_to_num(reversed_training_distribution_similar.cpu(), 0.5)
         reversed_training_distribution_opposing = torch.nan_to_num(reversed_training_distribution_opposing.cpu().fill_diagonal_(0), 0.5)
 
-        probability_distribution_similar = torch.softmax(reversed_training_distribution_similar * 5, dim=0)
-        probability_distribution_opposing = torch.softmax(reversed_training_distribution_opposing.flatten() * 5, dim=0).reshape(num_classes, num_classes)
+        probability_distribution_similar = torch.softmax(reversed_training_distribution_similar * 7, dim=0)
+        probability_distribution_opposing = torch.softmax(reversed_training_distribution_opposing.flatten() * 7, dim=0).reshape(num_classes, num_classes)
 
 
         distributionSimilar = probability_distribution_similar
@@ -193,12 +193,12 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, test_path, sa
         print(distributionSimilar)
         print(distributionOpposing)
 
-        print(f"epoch {epoch} avg loss {total_loss / 10000:.4f}")
+        print(f"epoch {epoch} avg loss {total_loss / 100000:.4f}")
         print("Training Metrics:")
-        print(f"    avg similarity true {avgSimilarityTrue / 10000:.4f}")
-        print(f"    avg similarity false {avgSimilarityFalse / 10000:.4f}")
-        print(f"    avg similarity match {total_correct_similar / 10000:.4f}")
-        print(f"    avg similarity diff {total_correct_opposing / 10000:.4f}")
+        print(f"    avg similarity true {avgSimilarityTrue / 100000:.4f}")
+        print(f"    avg similarity false {avgSimilarityFalse / 100000:.4f}")
+        print(f"    avg similarity match {total_correct_similar / 100000:.4f}")
+        print(f"    avg similarity diff {total_correct_opposing / 100000:.4f}")
         print("Testing Metrics:")
         print(f"    accuracy {total_correct / 1000:.4f}")
         print(f"    accuracy high {total_correct_high / 1000:.4f}")
@@ -210,6 +210,6 @@ def train_two_electric_boggalo(epochs, model, loss_fn, train_path, test_path, sa
 
 if __name__ == "__main__":
     model = Model()
-    model.load_state_dict(torch.load("models/gen2/model_continued_new_new.pth"))
+    model.load_state_dict(torch.load("models/gen3/gen3_1.pth"))
     loss_fn = torch.nn.TripletMarginLoss(margin=0.2)
-    train_two_electric_boggalo(100, model, loss_fn, "trainingData/convertedDataset.pkl", "trainingData/convertedDatasetTest.pkl", save_path="models/gen2/model_continued_new_new.pth")
+    train_two_electric_boggalo(100, model, loss_fn, "trainingData/gen3Training.pkl", "trainingData/convertedDatasetTest.pkl", save_path="models/gen3/gen3_2.pth")

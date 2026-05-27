@@ -75,7 +75,8 @@ class Model(nn.Module):
 
 app = FastAPI()
 model = Model()
-model.load_state_dict(torch.load("model.pth"))
+model.load_state_dict(torch.load("../modelTraining/models/gen2/new_data_new_new.pth"))
+model.eval()
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -108,7 +109,7 @@ async def predict(file: UploadFile = File(...)):
 @app.post("/predict_many")
 async def predict(files: List[UploadFile] = File(...)):
     try:
-        input_vectors = numpy.zeros((len(files), 3, 128, 128))
+        input_vectors = torch.zeros((len(files), 3, 128, 128))
         for i, file in enumerate(files):
             if not file.content_type.startswith("image/"):
                 raise ValueError("Invalid file type")
