@@ -56,7 +56,7 @@ function renderClassList() {
         chip.onclick = () => {
             state.selectedClass = state.selectedClass === cls.name ? null : cls.name;
             renderClassList();
-            renderCustomClassExamples();
+            renderCustomClassExamplesShowHide();
         };
         list.insertBefore(chip, addBtn);
     }
@@ -229,7 +229,7 @@ async function saveCustomClass() {
 
     cancelCustomClass();
     renderClassList();
-    renderCustomClassExamples();
+    renderCustomClassExamplesShowHide();
 }
 
 function readFileAsDataURL(file) {
@@ -329,6 +329,55 @@ async function handleSearch() {
     } catch (err) {
         console.error(err);
         setStatus('Backend offline (search issue: change)', false);
+    }
+}
+
+// Renderer that uses show/hide behavior and prefers local data-URLs for user-created classes
+function renderCustomClassExamplesShowHide() {
+    const displayDiv = document.getElementById('custom-class-examples-display');
+    const grid = document.getElementById('custom-class-examples-grid');
+    const nameLabel = document.getElementById('selected-class-name');
+
+    grid.innerHTML = '';
+
+    if (!state.selectedClass) {
+        displayDiv.hidden = true;
+        return;
+    }
+
+    const customClass = state.customClasses.find(c => c.name === state.selectedClass);
+
+    // If we have local data-URL examples for this custom class, show them and return
+    if (customClass && Array.isArray(customClass.examples) && customClass.examples.length > 0) {
+        displayDiv.hidden = false;
+        if (nameLabel) nameLabel.textContent = customClass.name;
+        for (const dataUrl of customClass.examples) {
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.className = 'thumb';
+            img.alt = customClass.name;
+            grid.appendChild(img);
+        }
+        return;
+    }
+
+    // Otherwise fall back to server-side examplePaths (if present)
+    if (!customClass || !customClass.examplePaths || customClass.examplePaths.length === 0) {
+        displayDiv.hidden = true;
+        return;
+    }
+
+    displayDiv.hidden = false;
+    if (nameLabel) nameLabel.textContent = customClass.name;
+
+    for (const filePath of customClass.examplePaths) {
+        const img = document.createElement('img');
+        const filename = filePath.split(/[\\\\/]/).pop();
+        img.src = `${API_BASE}/api/examples/${encodeURIComponent(customClass.name)}/${encodeURIComponent(filename)}`;
+        img.className = 'thumb';
+        img.alt = filename;
+        img.onerror = () => { img.alt = `Failed to load ${filename}`; };
+        grid.appendChild(img);
     }
 }
 
