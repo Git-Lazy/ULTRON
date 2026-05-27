@@ -75,7 +75,8 @@ class Model(nn.Module):
 
 app = FastAPI()
 model = Model()
-model.load_state_dict(torch.load("model.pth"))
+model.load_state_dict(torch.load("new_data_new_new.pth"))
+model.eval()
 
 transform = transforms.Compose([
     transforms.ToTensor(),

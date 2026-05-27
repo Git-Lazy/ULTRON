@@ -440,3 +440,5 @@ modelTraining/trainingData
 venv
 .idea
 examples
+Food_Classification_dataset/
+Food_Classification_dataset_copy/

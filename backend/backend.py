@@ -9,12 +9,25 @@ old_path = Path("dataset/")
 new_path = Path("sorted_images/")
 
 
-
-class_names = ["bird", "certificate", "donkey", "forest", "horse"]
+class_names = []
 
 def set_class_names(class_names_list):
     global class_names
     class_names = class_names_list
+
+
+def load_class_names_from_json():
+    json_path = "examples/class_names.json"
+    if Path(json_path).exists():
+        class_names_list = json.loads(Path(json_path).read_text())
+        set_class_names(class_names_list)
+    else:
+        print(f"No JSON file found for class names. Starting with an empty list.")
+        set_class_names([])
+
+load_class_names_from_json()
+
+
     
 def add_class_name(class_name):
     global class_names
@@ -34,14 +47,28 @@ def delete_example_images_for_class(class_name):
 
 def add_example_image(example_path, class_name):
     if class_name not in class_names:
-        raise ValueError(f"Class name '{class_name}' does not exist.")
-    else:
-        copy_image(example_path, f"examples/{class_name}")
-        dest_path = f"examples/{class_name}/{Path(example_path).name}"
-        
-        vector = get_prediction_from_model(example_path)
-        json_path = dest_path + ".json"
-        Path(json_path).write_text(json.dumps(vector))
+        class_names.append(class_name)
+    copy_image(example_path, f"examples/{class_name}")
+    dest_path = f"examples/{class_name}/{Path(example_path).name}"
+    
+    vector = get_prediction_from_model(example_path)
+    json_path = dest_path + ".json"
+    Path(json_path).write_text(json.dumps(vector))
+
+def save_class_names_to_json(class_names):
+    json_path = "examples/class_names.json"
+    Path(json_path).write_text(json.dumps(class_names))
+
+def get_example_images(class_name):
+    example_images = []
+    example_images_folder = Path(f"examples/{class_name}")
+    if example_images_folder.exists() and example_images_folder.is_dir():
+        for image in example_images_folder.iterdir():
+            if not image.is_file():
+                continue
+            if is_image_file(image):
+                example_images.append(str(image))
+    return example_images
 
 def get_example_image_data(example_path):
     json_path = example_path + ".json"
@@ -139,7 +166,7 @@ def get_prediction_from_model(image_path):
         except Exception as e:
             print(f"Error calling model: {str(e)}")
 
-def get_class_names_from_model(unsorted_folder_path):
+def get_predictions_plural_from_model(unsorted_folder_path):
     # TODO: fix this function to get the class names from the model prediction through the api call to the model server
     images = list()
     for file in Path(unsorted_folder_path).iterdir():
@@ -149,8 +176,18 @@ def get_class_names_from_model(unsorted_folder_path):
                     if not image.is_file():
                         continue
                     if is_image_file(image):
-                        images.append((image, get_prediction_from_model(image)))
+                        images.append((image))
             continue
+    try:
+        response = http_requests.post(
+            "http://localhost:8001/predict_many",
+            files={"files": images} 
+            # files={"file": (Path(image_path).name, f, f"image/{Path(image_path).suffix[1:]}")}
+        )
+        print(response.json())
+        return response.json()
+    except Exception as e:
+        print(f"Error calling model: {str(e)}")
     return images
 
 def create_sorted_images_folder():
@@ -187,6 +224,8 @@ def weighted_cosine_similarity(vec, vec_list):
     weights = [s / total_similarity for s in similarities]
     average_weighted_similarity = total_similarity*sum(weights) / len(vec_list)
     return average_weighted_similarity
+    # average_similarity = total_similarity / len(vec_list)
+    # return average_similarity
 
 # will delete this once connected to the model api
 images = list()
@@ -201,14 +240,24 @@ for file in old_path.iterdir():
             currentFolderName = file.name
             # set last index to the last index of the previous folder
             lastImageIndexes[currentFolderName] = lastImageIndexes[folderNames[folderNames.index(currentFolderName) - 1]]
+            # indexF = 0
             for image in file.iterdir():
+                # if indexF >= 10:
+                #     break
                 if not image.is_file():
                     continue
-                images.append((image, currentFolderName))
-                lastImageIndexes[currentFolderName] += 1
+                if is_image_file(image):
+                    images.append((image, currentFolderName))
+                    lastImageIndexes[currentFolderName] += 1
+                    # indexF += 1
         continue
-    
+
+
+get_predictions_plural_from_model(str(old_path))
+
+
 move_images_to_sorted_folder(images)
+save_class_names_to_json(class_names)
 delete_folder(str(old_path))
 
 
