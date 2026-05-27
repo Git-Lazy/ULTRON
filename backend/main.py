@@ -1,3 +1,4 @@
+import backend.backend as backend
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn

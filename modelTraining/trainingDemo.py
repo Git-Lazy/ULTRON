@@ -138,7 +138,7 @@ from model import Model
 def showExample():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model().to(device)
-    model.load_state_dict(torch.load("models/high_gap_model_83_40.pth", map_location=device))
+    model.load_state_dict(torch.load("models/gen1/high_gap_model_83_40.pth", map_location=device))
     model.eval()
     dataset = torch.load("trainingData/demoDataset.pkl")
 
