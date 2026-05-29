@@ -66,7 +66,7 @@ def filterDirectory(directory, outputDirectory, model):
 def filterImages(classes_dir, source_dir, output_dir):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model()
-    model.load_state_dict(torch.load("models/gen2/model_continued_new_new.pth"))
+    model.load_state_dict(torch.load("models/gen3/gen3_1.5.pth"))
     classes = os.listdir(classes_dir)
     classExamples = {}
     os.makedirs(output_dir, exist_ok=True)
@@ -108,13 +108,13 @@ def filterImages(classes_dir, source_dir, output_dir):
                     highest_similarity = similarities[i]
                     predicted_class = class_name
             class_output_dir = os.path.join(output_dir, predicted_class)
-            shutil.move(os.path.join(source_dir, name[i]), os.path.join(class_output_dir,  f"{highest_similarity:.4f}_{name[i]}"))
+            shutil.move(os.path.join(source_dir, name[i]), os.path.join(class_output_dir,  f"{highest_similarity:.6f}.jpg"))
 
 
 
 if __name__ == "__main__":
     print("Starting filtering...")
     model = Model()
-    model.load_state_dict(torch.load("models/gen2/model_continued_new_new.pth"))
+    model.load_state_dict(torch.load("models/gen3/gen3_1.5.pth"))
     # filterDirectory("trainingData/Glacier/actuallySorted", "trainingData/Glacier/actuallySortedForReal", model)
     filterImages("trainingData/recovered/seg_train/seg_train", "trainingData/recovered/seg_pred/seg_pred", "trainingData/sortedData")
