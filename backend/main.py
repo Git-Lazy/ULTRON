@@ -101,6 +101,15 @@ def predict(req: PredictionRequest):
             status_code=500,
             content={"error": f"Model service error: {str(e)}"}
         )
+        
+
+@app.post("/sort")
+def sort_images(folder_path: str):
+    try:
+        backend.sort_images(folder_path)
+        return fastapi.responses.JSONResponse(status_code=200, content={"status": "sorting started"})
+    except Exception as e:
+        return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 
 

@@ -109,7 +109,7 @@ async def predict(file: UploadFile = File(...)):
 @app.post("/predict_many")
 async def predict(files: List[UploadFile] = File(...)):
     try:
-        input_vectors = numpy.zeros((len(files), 3, 128, 128))
+        input_vectors = torch.zeros((len(files), 3, 128, 128))
         for i, file in enumerate(files):
             if not file.content_type.startswith("image/"):
                 raise ValueError("Invalid file type")
