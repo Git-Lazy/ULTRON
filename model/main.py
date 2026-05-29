@@ -13,6 +13,7 @@ from typing import List
 import uvicorn
 import sys
 
+
 def resource_path(relative_path):
     base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, relative_path)
@@ -135,5 +136,17 @@ async def predict(files: List[UploadFile] = File(...)):
 async def health():
     return {"status": "ok"}
 
+server: uvicorn.Server = None  # will hold the real running instance
+
+@app.get("/shutdown")
+async def shutdown():
+    try:
+        server.should_exit = True
+        return responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
+    except Exception as e:
+        return responses.JSONResponse(status_code=500, content={"error": str(e)})
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    config = uvicorn.Config(app, host="0.0.0.0", port=8001)
+    server = uvicorn.Server(config)
+    server.run()

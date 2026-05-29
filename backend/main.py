@@ -1,4 +1,3 @@
-import backend.backend as backend
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -8,6 +7,7 @@ from pydantic import BaseModel
 import requests as http_requests
 import sys
 from pathlib import Path
+import time
 
 # Add parent directory to path to import backend module
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -117,20 +117,23 @@ def health_check():
 # @app.on_event("shutdown")
 # def shutdown_event():
 
+server: uvicorn.Server = None  # will hold the real running instance
+
 @app.get("/shutdown")
-def shutdown():
+async def shutdown():
     try:
-        # Perform any necessary cleanup here
-        # For example, you could close database connections or release resources
-        # Then, shut down the server
-        response = http_requests.get(
-            f"http://localhost:8001/shutdown"
-        )
-        uvicorn_server = uvicorn.Server(uvicorn.Config(app))
-        uvicorn_server.should_exit = True
+        response = http_requests.get("http://localhost:8001/shutdown")
+        while response.status_code != 200:
+            print("Failed to shutdown model server, retrying...")
+            time.sleep(1)
+            response = http_requests.get("http://localhost:8001/shutdown")
+        print("model server shutdown initiated")
+        server.should_exit = True
         return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000)
+    server = uvicorn.Server(config)
+    server.run()

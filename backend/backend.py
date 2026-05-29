@@ -342,9 +342,9 @@ def sort_images(folder_path):
 
 # get_predictions_plural_from_model(str(old_path))
 
-list_images_in_folder(str(old_path))
-move_images_to_sorted_folder(images, str(old_path), str(new_path))
-save_class_names_to_json(class_names)
+# list_images_in_folder(str(old_path))
+# move_images_to_sorted_folder(images, str(old_path), str(new_path))
+# save_class_names_to_json(class_names)
 # delete_folder(str(old_path))
 
 
