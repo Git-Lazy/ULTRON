@@ -14,6 +14,8 @@
 dataset/
 dataset_images/
 sorted_images/
+*.venv
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -437,5 +439,10 @@ FodyWeavers.xsd
 modelTraining/trainingData
 venv
 .idea
+examples
+Food_Classification_dataset/
+Food_Classification_dataset_copy/
+nature/
+dataset42/
 dist
 build

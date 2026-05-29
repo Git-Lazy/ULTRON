@@ -62,9 +62,9 @@ def run_processes(commands: dict[str, str]):
 if __name__ == "__main__":
     # Replace these with your actual API startup commands
     commands = {
-        "Frontend": "cd frontend && python main.py",
-        #"Backend": "cd backend/api && uvicorn main:app --host 0.0.0.0 --port 8000",
         "Model": "cd model && uvicorn main:app --host 0.0.0.0 --port 8001",
+        "Backend": "cd backend && uvicorn main:app --host 0.0.0.0 --port 8000",
+        "Frontend": "cd frontend && python main.py",
     }
 
     run_processes(commands)
