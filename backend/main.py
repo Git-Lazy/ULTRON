@@ -75,7 +75,7 @@ def delete_item(class_name: str):
 def predict(req: PredictionRequest):
     try:
         response = http_requests.post(
-            f"{os.getenv('MODEL_SERVICE_URL')}/predict",
+            f"http://localhost:8001/predict",
             json={"features": req.features}
         )
         return response.json()
@@ -99,6 +99,20 @@ def sort_images(folder_path: str):
 # @app.on_event("shutdown")
 # def shutdown_event():
 
+@app.get("/shutdown")
+def shutdown():
+    try:
+        # Perform any necessary cleanup here
+        # For example, you could close database connections or release resources
+        # Then, shut down the server
+        response = http_requests.get(
+            f"http://localhost:8001/shutdown"
+        )
+        uvicorn_server = uvicorn.Server(uvicorn.Config(app))
+        uvicorn_server.should_exit = True
+        return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
+    except Exception as e:
+        return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
