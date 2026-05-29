@@ -283,6 +283,12 @@ def get_cosine_similarity(vec1, vec2):
     return dot_product / (magnitude_vec1 * magnitude_vec2)
 
 def weighted_cosine_similarity(vec, vec_list):
+    # example_norm = torch.nn.functional.normalize(exampleEmbeddings, p=2, dim=1).to(device)
+    # embeddings = model(batch)
+    # batch_norm = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+    # similarities = batch_norm @ example_norm.T
+    # weights = torch.nn.functional.softmax(similarities, dim=1)
+    # weighted_similarities = (weights * similarities).sum(dim=1)
     similarities = [get_cosine_similarity(vec, v) for v in vec_list]
     total_similarity = sum(similarities)
     if total_similarity == 0:
