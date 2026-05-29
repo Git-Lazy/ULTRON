@@ -110,7 +110,9 @@ def sort_images(folder_path: str):
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
-
+@app.get("/health")
+def health_check():
+    return fastapi.responses.JSONResponse(status_code=200, content={"status": "healthy"})
 
 # @app.on_event("shutdown")
 # def shutdown_event():
