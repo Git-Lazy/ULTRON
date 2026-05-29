@@ -4,6 +4,7 @@ from torchvision.utils import save_image
 from torchvision import transforms
 import pyexiv2
 import shutil
+import uvicorn
 
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
@@ -135,8 +136,8 @@ for file in Path("dataset/").iterdir():
                 lastImageIndexes[currentFolderName] += 1
         continue
     
-move_images_to_sorted_folder(images)
-delete_folder("dataset")
+# move_images_to_sorted_folder(images)
+# delete_folder("dataset")
 
 
 

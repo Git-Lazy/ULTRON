@@ -10,6 +10,12 @@ from fastapi import FastAPI, File, UploadFile, responses
 import torch
 import io
 from typing import List
+import uvicorn
+import sys
+
+def resource_path(relative_path):
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative_path)
 
 
 class ResizeWithPad:
@@ -75,7 +81,7 @@ class Model(nn.Module):
 
 app = FastAPI()
 model = Model()
-model.load_state_dict(torch.load("../modelTraining/models/gen2/new_data_new_new.pth"))
+model.load_state_dict(torch.load(resource_path("model.pth")))
 model.eval()
 
 transform = transforms.Compose([
@@ -124,3 +130,10 @@ async def predict(files: List[UploadFile] = File(...)):
     except Exception as e:
         print(e)
         return responses.JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)

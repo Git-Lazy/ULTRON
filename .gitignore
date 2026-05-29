@@ -437,3 +437,5 @@ FodyWeavers.xsd
 modelTraining/trainingData
 venv
 .idea
+dist
+build
