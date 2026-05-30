@@ -1,17 +1,12 @@
-from torch.nn import functional as FootPics
-from torch import nn
-from torch import tensor, zeros, save
-from torchvision import transforms
 import numpy
 from PIL import Image
-import torchvision.transforms.functional as F
 import os
 from fastapi import FastAPI, File, UploadFile, responses
-import torch
 import io
 from typing import List
 import uvicorn
 import sys
+import onnxruntime as onnx
 
 
 def resource_path(relative_path):
@@ -19,77 +14,57 @@ def resource_path(relative_path):
     return os.path.join(base, relative_path)
 
 
-class ResizeWithPad:
-    def __init__(self, target_size):
-        self.target_size = target_size  # e.g. 224
-
-    def __call__(self, img):
-        _, w, h = img.shape  # PIL uses (width, height)
-        scale = self.target_size / max(w, h)
-
-        # Resize proportionally
-        new_w = int(w * scale)
-        new_h = int(h * scale)
-        img = F.resize(img, (new_h, new_w))
-
-        # Calculate padding to reach target_size x target_size
-        pad_left   = (self.target_size - new_w) // 2
-        pad_right  = self.target_size - new_w - pad_left
-        pad_top    = (self.target_size - new_h) // 2
-        pad_bottom = self.target_size - new_h - pad_top
-
-        img = F.pad(img, (pad_left, pad_top, pad_right, pad_bottom), fill=0)
-        return img
 
 
-class Model(nn.Module):
-    def __init__(self, embedding_dim=256):
-        super(Model, self).__init__()
 
-        def conv_block(in_ch, out_ch, pool=True):
-            layers = [
-                nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True),
-            ]
-            if pool:
-                layers.append(nn.MaxPool2d(2, 2))
-            return layers
-
-        steps = []
-        steps += conv_block(3,   32)   # → 32 × 64 × 64
-        steps += conv_block(32,  64)   # → 64 × 32 × 32
-        steps += conv_block(64,  128)  # → 128 × 16 × 16
-        steps += conv_block(128, 256)  # → 256 × 8 × 8
-        steps += [
-            nn.AdaptiveAvgPool2d((4, 4)),  # → 256 × 4 × 4 (more robust than Flatten raw)
-            nn.Flatten(),
-            nn.Linear(256 * 4 * 4, 512),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(512, embedding_dim),
-        ]
-
-        self.steps = nn.Sequential(*steps)
-
-    def forward(self, x):
-        return FootPics.normalize(self.steps(x), p=2, dim=1)
-
+session = onnx.InferenceSession(resource_path("model.onnx"))
+class Model:
+    def __init__(self, session: onnx.InferenceSession):
+        self.session = session
+    def __call__(self, x: numpy.ndarray):
+        input_name = self.session.get_inputs()[0].name
+        output = self.session.run(None, {input_name: x})[0]
+        return output
 
 
 app = FastAPI()
-model = Model()
-model.load_state_dict(torch.load(resource_path("model.pth")))
-model.eval()
+model = Model(session)
 
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
-    ResizeWithPad(128),
-])
+
+class ResizeWithPad:
+    def __init__(self, target_size):
+        self.target_size = target_size
+
+    def __call__(self, img: numpy.ndarray):
+        _, w, h = img.shape
+        scale = self.target_size / max(w, h)
+
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+
+        # Convert to PIL for resizing
+        pil = Image.fromarray((img.transpose(1, 2, 0) * 255).astype(numpy.uint8))
+        pil = pil.resize((new_h, new_w), Image.BILINEAR)
+        img = numpy.array(pil).astype(numpy.float32).transpose(2, 0, 1) / 255.0
+
+        pad_left = (self.target_size - new_w) // 2
+        pad_right = self.target_size - new_w - pad_left
+        pad_top = (self.target_size - new_h) // 2
+        pad_bottom = self.target_size - new_h - pad_top
+
+        img = numpy.pad(img, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right)), constant_values=0)
+        return img
+
+
+def transform(img: Image.Image) -> numpy.ndarray:
+    # ToTensor: HWC -> CHW, scale to [0, 1]
+    arr = numpy.array(img).astype(numpy.float32) / 255.0
+    arr = arr.transpose(2, 0, 1)
+    # Normalize mean=0.5, std=0.5
+    arr = (arr - 0.5) / 0.5
+    # ResizeWithPad
+    arr = ResizeWithPad(128)(arr)
+    return arr
 
 @app.post("/predict_one")
 async def predict(file: UploadFile = File(...)):
@@ -104,8 +79,9 @@ async def predict(file: UploadFile = File(...)):
         image = transform(image)
         print("transformed image:")
         print(image.shape)
-        input_tensor = torch.zeros(1, 3, 128, 128)
+        input_tensor = numpy.zeros((1, 3, 128, 128), dtype=numpy.float32)
         input_tensor[0] = image
+        input_tensor = input_tensor
         embedding = model(input_tensor)[0]
         print("got embedding:")
         return embedding.tolist()
@@ -116,7 +92,7 @@ async def predict(file: UploadFile = File(...)):
 @app.post("/predict_many")
 async def predict(files: List[UploadFile] = File(...)):
     try:
-        input_vectors = torch.zeros((len(files), 3, 128, 128))
+        input_vectors = numpy.zeros((len(files), 3, 128, 128), dtype=numpy.float32)
         for i, file in enumerate(files):
             if not file.content_type.startswith("image/"):
                 raise ValueError("Invalid file type")
