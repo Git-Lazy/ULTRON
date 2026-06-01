@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 # import piexif
 import requests as http_requests
-import torch
+# import torch
 
 old_path = Path("dataset/")
 new_path = Path("sorted_images/")
@@ -273,7 +273,7 @@ def move_images_to_sorted_folder(images, old_path, new_path):
                 move_image(str(image) + ".json", f"{new_path}/{folderName}")
         else:
             print(f"File '{image}' is not a supported image format. Skipping.")
-            i-=1
+            indexi-=1
 
 def get_cosine_similarity(vec1, vec2):
     dot_product = sum(a * b for a, b in zip(vec1, vec2))
@@ -295,7 +295,7 @@ def weighted_cosine_similarity(vec, vec_list): #(vec, vec_list): # (vec_list, ex
     similarities = [get_cosine_similarity(vec, v) for v in vec_list]
     total_similarity = sum(similarities)
     if total_similarity == 0:
-        return [0] * len(vec_list)
+        return 0
     weights = [s / total_similarity for s in similarities]
     average_weighted_similarity = total_similarity*sum(weights) / len(vec_list)
     return average_weighted_similarity

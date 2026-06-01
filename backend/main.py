@@ -1,4 +1,4 @@
-import backend.backend as backend
+import backend
 import fastapi
 import uvicorn
 from dotenv import load_dotenv
@@ -100,17 +100,17 @@ def health_check():
     return fastapi.responses.JSONResponse(status_code=200, content={"status": "healthy"})
 
 
-@app.get("/shutdown")
-def shutdown():
-    try:
-        response = http_requests.get(
-            f"http://localhost:8001/shutdown"
-        )
-        uvicorn.should_exit = True
-        uvicorn.force_exit = True
-        return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
-    except Exception as e:
-        return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
+# @app.get("/shutdown")
+# def shutdown():
+#     try:
+#         response = http_requests.get(
+#             f"http://localhost:8001/shutdown"
+#         )
+#         uvicorn.should_exit = True
+#         uvicorn.force_exit = True
+#         return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
+#     except Exception as e:
+#         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
