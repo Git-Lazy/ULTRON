@@ -78,7 +78,7 @@ def predict(file: UploadFile = File(...)):
     try:
         response = http_requests.post(
             f"http://localhost:8001/predict_one",
-            json={"file": file.filename}
+            json={"file": file}
         )
         return response.json()
     except Exception as e:
