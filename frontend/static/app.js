@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000';
+const API_BASE = '';
 
 const state = {
     premadeClasses: [],
@@ -40,6 +40,17 @@ function hasNativePicker() {
         // ignore if console cannot be wrapped
     }
 })();
+
+function bridgeLog(message) {
+    try {
+        console.log(message);
+    } catch (_) {}
+    try {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.log) {
+            window.pywebview.api.log(message).catch(() => {});
+        }
+    } catch (_) {}
+}
 
 // Text renderer for prediction results (renderOutput is for image URLs).
 function renderPredictions(lines) {
@@ -329,26 +340,28 @@ async function sendClassifyImage() {
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Classifying...');
     try {
-        // main.py exposes POST /predict expecting a multipart "file" upload, so
-        // rebuild the bytes from the preview source (data:/blob: URL) and send
-        // them as a file named after the picked image.
         const filename = imagePath.split(/[\\/]/).pop();
         const blob = await (await fetch(state.classifySrc)).blob();
         const formData = new FormData();
         formData.append('file', blob, filename);
+        bridgeLog(`sending /predict for ${filename}`);
         const res = await fetch(`${API_BASE}/predict`, {
             method: 'POST',
             body: formData
         });
         const text = await res.text();
-        console.log('predict response status', res.status, 'body:', text);
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+        if (!res.ok) {
+            bridgeLog(`predict HTTP error ${res.status} body: ${text}`);
+            throw new Error(`HTTP ${res.status}: ${text}`);
+        }
         const data = JSON.parse(text);
         const name = data.class_name || 'No matching class';
+        bridgeLog(`predict parsed class_name=${name}`);
         renderPredictions([`${filename} → ${name}`]);
         setStatus('System online');
     } catch (err) {
         console.error(err);
+        bridgeLog(`sendClassifyImage error: ${err}`);
         setStatus('Unable to classify image', false);
     } finally {
         if (sendBtn) sendBtn.disabled = false;

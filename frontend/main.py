@@ -56,6 +56,13 @@ class Api:
             return None
         return {"path": result[0]}
 
+    def log(self, message: str):
+        """Receive log messages from the page and forward them to the Python console."""
+        try:
+            print(f"[webview] {message}")
+        except Exception:
+            pass
+
 # when in the frontend directory, run .\.venv\Scripts\Activate.ps1 (to get into the venv)
 # then run python main.py to start the server and open the webview window
 
