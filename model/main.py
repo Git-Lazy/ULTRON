@@ -37,10 +37,14 @@ class ResizeWithPad:
 
     def __call__(self, img: numpy.ndarray):
         _, w, h = img.shape
+        print("widtht and height:", w, h)
         scale = self.target_size / max(w, h)
+        print("scale:", scale)
 
         new_w = int(w * scale)
+        print("new width:", new_w)
         new_h = int(h * scale)
+        print("new height:", new_h)
 
         # Convert to PIL for resizing
         pil = Image.fromarray((img.transpose(1, 2, 0) * 255).astype(numpy.uint8))
@@ -48,11 +52,19 @@ class ResizeWithPad:
         img = numpy.array(pil).astype(numpy.float32).transpose(2, 0, 1) / 255.0
 
         pad_left = (self.target_size - new_w) // 2
+        print("pad left:", pad_left)
         pad_right = self.target_size - new_w - pad_left
+        print("pad right:", pad_right)
         pad_top = (self.target_size - new_h) // 2
+        print("pad top:", pad_top)
         pad_bottom = self.target_size - new_h - pad_top
+        print("pad bottom:", pad_bottom)
 
-        img = numpy.pad(img, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right)), constant_values=0)
+        print("img shape before padding:")
+        print(img.shape)
+        img = numpy.pad(img, ((0, 0), (pad_left, pad_right), (pad_top, pad_bottom)), constant_values=0)
+        print("img shape after padding:")
+
         return img
 
 
@@ -63,7 +75,11 @@ def transform(img: Image.Image) -> numpy.ndarray:
     # Normalize mean=0.5, std=0.5
     arr = (arr - 0.5) / 0.5
     # ResizeWithPad
+    print("pre resize")
+    print(arr.shape)
     arr = ResizeWithPad(128)(arr)
+    print("post resize")
+    print(arr.shape)
     return arr
 
 @app.post("/predict_one")
@@ -86,7 +102,6 @@ async def predict(file: UploadFile = File(...)):
         print("got embedding:")
         return embedding.tolist()
     except Exception as e:
-        print(e)
         return responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/predict_many")
