@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
 import requests as http_requests
+<<<<<<< HEAD
 import sys
 from pathlib import Path
+=======
+from fastapi import FastAPI, File, UploadFile, responses
+>>>>>>> c08c4d93a16d460e37816a8038bdaf60890e22f2
 
 # Add parent directory to path to import backend module
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -88,12 +92,17 @@ def delete_class(class_name: str):
 
 
 @app.post("/predict")
-def predict(req: PredictionRequest):
+def predict(file: UploadFile = File(...)):
     try:
         model_url = os.getenv('MODEL_SERVICE_URL', 'http://localhost:8001')
         response = http_requests.post(
+<<<<<<< HEAD
             f"{model_url}/predict",
             json={"features": req.features}
+=======
+            f"http://localhost:8001/predict_one",
+            json={"file": file.filename}
+>>>>>>> c08c4d93a16d460e37816a8038bdaf60890e22f2
         )
         return response.json()
     except Exception as e:
@@ -111,11 +120,22 @@ def sort_images(folder_path: str):
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.get("/health")
+def health_check():
+    return fastapi.responses.JSONResponse(status_code=200, content={"status": "healthy"})
 
 
-# @app.on_event("shutdown")
-# def shutdown_event():
-
+@app.get("/shutdown")
+def shutdown():
+    try:
+        response = http_requests.get(
+            f"http://localhost:8001/shutdown"
+        )
+        uvicorn.should_exit = True
+        uvicorn.force_exit = True
+        return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
+    except Exception as e:
+        return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
