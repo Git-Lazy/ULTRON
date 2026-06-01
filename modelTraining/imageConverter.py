@@ -68,7 +68,7 @@ def convert_imageset(path="trainingData/TrainingSet2", output_path="trainingData
 
 
 
-#convert_imageset(path="trainingData/TrainingSet2", output_path="trainingData/newTraining.pkl")
+# convert_imageset(path="trainingData/gen3Data", output_path="trainingData/gen3Training.pkl")
 #convert_imageset_test()
 
 # image = Image.open("trainingData/initialTraining/chole_bhature/006.jpg").convert("RGB")
