@@ -77,6 +77,9 @@
                         <span class="upload-hint">Drop image to classify</span>
                     </label>
                     <div class="image-grid" id="uploaded-images" aria-label="Uploaded images"></div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="classify-send" onclick="sendClassifyImage()" disabled>Send</button>
+                    </div>
                 </div>
 
                 <div class="upload-section">
@@ -87,6 +90,9 @@
                     </label>
                     <div class="folder-summary" id="folder-summary"></div>
                     <div class="image-grid" id="uploaded-folder-images" aria-label="Folder images"></div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="folder-send" onclick="sendFolder()" disabled>Send</button>
+                    </div>
                 </div>
             </div>
 

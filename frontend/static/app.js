@@ -5,6 +5,10 @@ const state = {
     customClasses: [],
     selectedClass: null,
     pendingCustomExamples: [],
+    // Deferred selections: held until the user clicks "Send" so they can
+    // change a mis-click before anything is sent to the backend.
+    classifyFile: null,
+    folderPath: null,
 };
 
 function setStatus(text, ok = true) {
@@ -241,43 +245,66 @@ function readFileAsDataURL(file) {
     });
 }
 
-async function handleImageUpload(event) {
+function handleImageUpload(event) {
     const target = document.getElementById('uploaded-images');
     const file = (event.target && event.target.files && event.target.files[0]) || (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
     if (!file) return;
 
+    // Show only the most recent selection so the user can re-pick before sending.
+    target.innerHTML = '';
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     img.className = 'thumb';
     img.alt = file.name;
     target.appendChild(img);
 
-    setStatus('Uploading...');
-    try {
-        const form = new FormData();
-        form.append('image', file, file.name);
-        if (state.selectedClass) form.append('class', state.selectedClass);
-        const res = await fetch(`${API_BASE}/api/upload`, {
-            method: 'POST',
-            body: form
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setStatus('System online');
-    } catch (err) {
-        console.error(err);
-        setStatus('Backend offline (image upload issue: change)', false);
-    }
+    // Hold the selection; nothing is sent until the user clicks "Send".
+    state.classifyFile = file;
+    const sendBtn = document.getElementById('classify-send');
+    if (sendBtn) sendBtn.disabled = false;
+
     if (event.target && 'value' in event.target) event.target.value = '';
 }
 
-async function handleFolderUpload(event) {
+async function sendClassifyImage() {
+    const file = state.classifyFile;
+    if (!file) return;
+
+    // get_prediction_from_model expects the image *path*, not the bytes.
+    const imagePath = file.webkitRelativePath || file.name;
+
+    const sendBtn = document.getElementById('classify-send');
+    if (sendBtn) sendBtn.disabled = true;
+    setStatus('Classifying...');
+    try {
+        const res = await fetch(`${API_BASE}/api/predict-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_path: imagePath })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderOutput(data.images);
+        setStatus('System online');
+    } catch (err) {
+        console.error(err);
+        setStatus('Backend offline (classify issue: change)', false);
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
+    }
+}
+
+function handleFolderUpload(event) {
     const grid = document.getElementById('uploaded-folder-images');
     const summary = document.getElementById('folder-summary');
     grid.innerHTML = '';
 
     const files = Array.from(event.target.files).filter(f => f.type.startsWith('image/'));
+    const sendBtn = document.getElementById('folder-send');
     if (files.length === 0) {
         summary.textContent = 'No images found';
+        state.folderPath = null;
+        if (sendBtn) sendBtn.disabled = true;
         return;
     }
 
@@ -292,24 +319,37 @@ async function handleFolderUpload(event) {
         grid.appendChild(img);
     }
 
-    setStatus('Uploading folder...');
+    // Hold the folder path; nothing is sent until the user clicks "Send".
+    state.folderPath = folderName;
+    if (sendBtn) sendBtn.disabled = false;
+
+    event.target.value = '';
+}
+
+async function sendFolder() {
+    const folderPath = state.folderPath;
+    if (!folderPath) return;
+
+    // get_predictions_plural_from_model expects the folder *path*.
+    const sendBtn = document.getElementById('folder-send');
+    if (sendBtn) sendBtn.disabled = true;
+    setStatus('Classifying folder...');
     try {
-        const form = new FormData();
-        form.append('folder', folderName);
-        for (const file of files) {
-            form.append('images', file, file.webkitRelativePath || file.name);
-        }
-        const res = await fetch(`${API_BASE}/api/upload-folder`, {
+        const res = await fetch(`${API_BASE}/api/predict-folder`, {
             method: 'POST',
-            body: form
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder_path: folderPath })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderOutput(data.images);
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline (folder upload issue: change)', false);
+        setStatus('Backend offline (folder classify issue: change)', false);
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
     }
-    event.target.value = '';
 }
 
 async function handleSearch() {

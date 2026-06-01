@@ -427,6 +427,17 @@ h1 {
     transform: scale(0.97);
 }
 
+.btn-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-secondary:disabled:hover {
+    background: rgba(200, 16, 46, 0.15);
+    box-shadow: none;
+}
+
 .btn-secondary--ghost {
     background: transparent;
     border-color: rgba(200, 16, 46, 0.3);
