@@ -567,6 +567,17 @@ h1 {
     border-radius: 8px;
 }
 
+.prediction-result {
+    grid-column: 1 / -1;
+    padding: 0.5rem 0.75rem;
+    color: var(--fg);
+    font-size: 0.8rem;
+    background: rgba(200, 16, 46, 0.08);
+    border: 1px solid rgba(200, 16, 46, 0.2);
+    border-radius: 8px;
+    word-break: break-all;
+}
+
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.08); opacity: 0.9; }

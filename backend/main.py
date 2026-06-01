@@ -1,4 +1,3 @@
-import backend.backend as backend
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -6,16 +5,17 @@ from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
 import requests as http_requests
-<<<<<<< HEAD
-import sys
-from pathlib import Path
-=======
 from fastapi import FastAPI, File, UploadFile, responses
->>>>>>> c08c4d93a16d460e37816a8038bdaf60890e22f2
+from pathlib import Path
 
-# Add parent directory to path to import backend module
-sys.path.insert(0, str(Path(__file__).parent.parent))
-import backend
+# Resolve the backend module whether launched from the project root
+# (``uvicorn backend.main:app``) or from inside the backend/ directory
+# (``uvicorn main:app``). The previous double-import left ``backend`` bound to
+# the namespace *package*, which has no class_names/get_prediction_from_model.
+try:
+    import backend.backend as backend
+except ModuleNotFoundError:
+    import backend
 
 load_dotenv()
 
@@ -96,13 +96,8 @@ def predict(file: UploadFile = File(...)):
     try:
         model_url = os.getenv('MODEL_SERVICE_URL', 'http://localhost:8001')
         response = http_requests.post(
-<<<<<<< HEAD
-            f"{model_url}/predict",
-            json={"features": req.features}
-=======
             f"http://localhost:8001/predict_one",
             json={"file": file.filename}
->>>>>>> c08c4d93a16d460e37816a8038bdaf60890e22f2
         )
         return response.json()
     except Exception as e:

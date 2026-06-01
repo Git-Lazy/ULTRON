@@ -72,10 +72,10 @@
                         Classify Image
                     </h3>
                     <p class="section-hint">Drop an image below to send it to the model.</p>
-                    <label class="upload-zone upload-zone--model" for="upload-input">
+                    <div class="upload-zone upload-zone--model" onclick="pickClassifyImage()">
                         <input type="file" id="upload-input" accept="image/*" hidden onchange="handleImageUpload(event)">
-                        <span class="upload-hint">Drop image to classify</span>
-                    </label>
+                        <span class="upload-hint">Click to choose an image to classify</span>
+                    </div>
                     <div class="image-grid" id="uploaded-images" aria-label="Uploaded images"></div>
                     <div class="form-actions">
                         <button type="button" class="btn-secondary" id="classify-send" onclick="sendClassifyImage()" disabled>Send</button>
@@ -84,10 +84,10 @@
 
                 <div class="upload-section">
                     <h3 class="subsection-title">Folder</h3>
-                    <label class="upload-zone" for="folder-input">
+                    <div class="upload-zone" onclick="pickFolder()">
                         <input type="file" id="folder-input" webkitdirectory directory multiple hidden onchange="handleFolderUpload(event)">
-                        <span class="upload-hint">Select folder</span>
-                    </label>
+                        <span class="upload-hint">Click to choose a folder</span>
+                    </div>
                     <div class="folder-summary" id="folder-summary"></div>
                     <div class="image-grid" id="uploaded-folder-images" aria-label="Folder images"></div>
                     <div class="form-actions">

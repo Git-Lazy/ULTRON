@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 # import piexif
 import requests as http_requests
-import torch
+# import torch
 
 old_path = Path("dataset/")
 new_path = Path("sorted_images/")

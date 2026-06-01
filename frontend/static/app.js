@@ -5,11 +5,37 @@ const state = {
     customClasses: [],
     selectedClass: null,
     pendingCustomExamples: [],
-    // Deferred selections: held until the user clicks "Send" so they can
-    // change a mis-click before anything is sent to the backend.
-    classifyFile: null,
+    // Deferred selections: real absolute paths held until the user clicks
+    // "Send", so a mis-click can be changed before anything reaches the backend.
+    classifyPath: null,
     folderPath: null,
 };
+
+// pywebview exposes Python under window.pywebview.api. When absent (plain
+// browser / Docker headless) we fall back to the hidden <input type=file>,
+// which only yields a sandboxed file name rather than a real path.
+function hasNativePicker() {
+    return !!(window.pywebview && window.pywebview.api && window.pywebview.api.pick_image);
+}
+
+// Text renderer for prediction results (renderOutput is for image URLs).
+function renderPredictions(lines) {
+    const target = document.getElementById('output-images');
+    target.innerHTML = '';
+    if (!lines || lines.length === 0) {
+        const ph = document.createElement('div');
+        ph.className = 'image-placeholder';
+        ph.textContent = 'No results';
+        target.appendChild(ph);
+        return;
+    }
+    for (const line of lines) {
+        const row = document.createElement('div');
+        row.className = 'prediction-result';
+        row.textContent = line;
+        target.appendChild(row);
+    }
+}
 
 function setStatus(text, ok = true) {
     const dot = document.querySelector('.status-dot');
@@ -113,11 +139,9 @@ function showCustomClassError(message) {
 
 async function pingBackend() {
     try {
-        const res = await fetch(`${API_BASE}/api-key`);
+        const res = await fetch(`${API_BASE}/health`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const key = data && data.api_key ? ` · API key (CHANGE MSG BEFORE USE): ${data.api_key}` : '';
-        setStatus(`Connected${key}`);
+        setStatus('Connected');
     } catch (err) {
         console.error(err);
         setStatus('Backend unreachable', false);
@@ -245,38 +269,54 @@ function readFileAsDataURL(file) {
     });
 }
 
-function handleImageUpload(event) {
+// Show a single preview thumbnail and arm the Send button for the chosen image.
+function setClassifyPreview(src, path, label) {
     const target = document.getElementById('uploaded-images');
-    const file = (event.target && event.target.files && event.target.files[0]) || (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
-    if (!file) return;
-
-    // Show only the most recent selection so the user can re-pick before sending.
     target.innerHTML = '';
     const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
+    img.src = src;
     img.className = 'thumb';
-    img.alt = file.name;
+    img.alt = label || path;
     target.appendChild(img);
 
-    // Hold the selection; nothing is sent until the user clicks "Send".
-    state.classifyFile = file;
+    state.classifyPath = path;
     const sendBtn = document.getElementById('classify-send');
     if (sendBtn) sendBtn.disabled = false;
+}
 
+// Drop-zone click: native dialog gives a real path; browser fallback uses the input.
+async function pickClassifyImage() {
+    if (!hasNativePicker()) {
+        document.getElementById('upload-input').click();
+        return;
+    }
+    try {
+        const picked = await window.pywebview.api.pick_image();
+        if (!picked) return;
+        setClassifyPreview(picked.data_url, picked.path, picked.path.split(/[\\/]/).pop());
+    } catch (err) {
+        console.error(err);
+        setStatus('Could not open file dialog', false);
+    }
+}
+
+// Browser fallback only: the File gives a blob preview but just a bare name as "path".
+function handleImageUpload(event) {
+    const file = (event.target && event.target.files && event.target.files[0]) || (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+    if (!file) return;
+    setClassifyPreview(URL.createObjectURL(file), file.name, file.name);
     if (event.target && 'value' in event.target) event.target.value = '';
 }
 
 async function sendClassifyImage() {
-    const file = state.classifyFile;
-    if (!file) return;
-
-    // get_prediction_from_model expects the image *path*, not the bytes.
-    const imagePath = file.webkitRelativePath || file.name;
+    const imagePath = state.classifyPath;
+    if (!imagePath) return;
 
     const sendBtn = document.getElementById('classify-send');
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Classifying...');
     try {
+        // get_prediction_from_model expects the image *path*, not the bytes.
         const res = await fetch(`${API_BASE}/api/predict-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -284,7 +324,8 @@ async function sendClassifyImage() {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        renderOutput(data.images);
+        const name = data.class_name || 'No matching class';
+        renderPredictions([`${imagePath.split(/[\\/]/).pop()} → ${name}`]);
         setStatus('System online');
     } catch (err) {
         console.error(err);
@@ -294,23 +335,45 @@ async function sendClassifyImage() {
     }
 }
 
+function setFolderSelection(path) {
+    state.folderPath = path;
+    document.getElementById('folder-summary').textContent = path;
+    const sendBtn = document.getElementById('folder-send');
+    if (sendBtn) sendBtn.disabled = false;
+}
+
+// Drop-zone click: native dialog returns a real folder path; browser falls back to the input.
+async function pickFolder() {
+    if (!(window.pywebview && window.pywebview.api && window.pywebview.api.pick_folder)) {
+        document.getElementById('folder-input').click();
+        return;
+    }
+    try {
+        const picked = await window.pywebview.api.pick_folder();
+        if (!picked) return;
+        document.getElementById('uploaded-folder-images').innerHTML = '';
+        setFolderSelection(picked.path);
+    } catch (err) {
+        console.error(err);
+        setStatus('Could not open folder dialog', false);
+    }
+}
+
+// Browser fallback only: shows thumbnails but can only report the top folder name.
 function handleFolderUpload(event) {
     const grid = document.getElementById('uploaded-folder-images');
-    const summary = document.getElementById('folder-summary');
     grid.innerHTML = '';
 
     const files = Array.from(event.target.files).filter(f => f.type.startsWith('image/'));
-    const sendBtn = document.getElementById('folder-send');
     if (files.length === 0) {
-        summary.textContent = 'No images found';
+        document.getElementById('folder-summary').textContent = 'No images found';
         state.folderPath = null;
+        const sendBtn = document.getElementById('folder-send');
         if (sendBtn) sendBtn.disabled = true;
         return;
     }
 
     const folderName = files[0].webkitRelativePath.split('/')[0] || 'folder';
-    summary.textContent = `${folderName} · ${files.length} images`;
-
     for (const file of files.slice(0, 24)) {
         const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
@@ -318,11 +381,7 @@ function handleFolderUpload(event) {
         img.alt = file.name;
         grid.appendChild(img);
     }
-
-    // Hold the folder path; nothing is sent until the user clicks "Send".
-    state.folderPath = folderName;
-    if (sendBtn) sendBtn.disabled = false;
-
+    setFolderSelection(folderName);
     event.target.value = '';
 }
 
@@ -330,23 +389,23 @@ async function sendFolder() {
     const folderPath = state.folderPath;
     if (!folderPath) return;
 
-    // get_predictions_plural_from_model expects the folder *path*.
     const sendBtn = document.getElementById('folder-send');
     if (sendBtn) sendBtn.disabled = true;
-    setStatus('Classifying folder...');
+    setStatus('Sorting folder...');
     try {
-        const res = await fetch(`${API_BASE}/api/predict-folder`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ folder_path: folderPath })
+        // Backend exposes POST /sort?folder_path=... (folder_path is a query
+        // param), which starts sorting and returns {status} rather than the
+        // per-file {results} the original /api/predict-folder contract promised.
+        const res = await fetch(`${API_BASE}/sort?folder_path=${encodeURIComponent(folderPath)}`, {
+            method: 'POST'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        renderOutput(data.images);
+        renderPredictions([`${folderPath} → ${data.status || 'sorting started'}`]);
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline (folder classify issue: change)', false);
+        setStatus('Backend offline (folder sort issue: change)', false);
     } finally {
         if (sendBtn) sendBtn.disabled = false;
     }
@@ -357,14 +416,14 @@ async function handleSearch() {
     if (!query) return;
     setStatus('Querying...');
     try {
-        const res = await fetch(`${API_BASE}/api/query`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query })
-        });
+        // Backend exposes GET /api/search?query=... returning {results: [paths]}
+        // (the POST /api/query {images} endpoint this UI was written for does
+        // not exist). Paths are server-side file paths, so the thumbnails will
+        // only resolve once the backend serves those images over HTTP.
+        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(query)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        renderOutput(data.images);
+        renderOutput(data.results);
         setStatus('System online');
     } catch (err) {
         console.error(err);
