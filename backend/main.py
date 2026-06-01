@@ -84,13 +84,12 @@ def delete_item(class_name: str):
 
 
 @app.post("/predict")
-#CHANGED SLIGHTLY TO ACCEPT FILE UPLOADS INSTEAD OF PATHS
 async def predict(file: UploadFile = File(...)):
     try:
         content = await file.read()
         response = http_requests.post(
-            "http://localhost:8001/predict_one",
-            files={"file": (file.filename, content, file.content_type)}
+            f"http://localhost:8001/predict_one",
+            json={"file": file}
         )
         response.raise_for_status()
         return response.json()
@@ -118,6 +117,7 @@ server: uvicorn.Server = None  # will hold the real running instance
 @app.get("/shutdown")
 async def shutdown():
     try:
+        backend.save_class_names_to_json()
         response = http_requests.get("http://localhost:8001/shutdown")
         while response.status_code != 200:
             print("Failed to shutdown model server, retrying...")
