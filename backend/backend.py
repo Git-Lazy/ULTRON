@@ -61,7 +61,7 @@ def add_example_image(example_path, class_name, vector=None):
     
 
 
-def save_class_names_to_json(class_names):
+def save_class_names_to_json():
     json_path = "examples/class_names.json"
     Path(json_path).write_text(json.dumps(class_names))
 

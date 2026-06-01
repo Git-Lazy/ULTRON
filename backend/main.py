@@ -106,6 +106,7 @@ server: uvicorn.Server = None  # will hold the real running instance
 @app.get("/shutdown")
 async def shutdown():
     try:
+        backend.save_class_names_to_json()
         response = http_requests.get("http://localhost:8001/shutdown")
         while response.status_code != 200:
             print("Failed to shutdown model server, retrying...")
