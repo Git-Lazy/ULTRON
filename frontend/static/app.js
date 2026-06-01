@@ -160,17 +160,6 @@ function showCustomClassError(message) {
     errorDiv.hidden = false;
 }
 
-async function pingBackend() {
-    try {
-        const res = await fetch(`${API_BASE}/health`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setStatus('Connected');
-    } catch (err) {
-        console.error(err);
-        setStatus('Backend unreachable', false);
-    }
-}
-
 async function loadPremadeClasses() {
     try {
         const res = await fetch(`${API_BASE}/classes/`);
@@ -506,4 +495,3 @@ function renderCustomClassExamplesShowHide() {
 
 renderClassList();
 loadPremadeClasses().then(loadSavedExamples);
-pingBackend();

@@ -1,6 +1,10 @@
 import fastapi
 import mimetypes
 import uvicorn
+
+#tbd
+from pathlib import Path
+
 from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
@@ -86,12 +90,35 @@ def delete_item(class_name: str):
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
-        content = await file.read()
-        response = http_requests.post(
-            f"http://localhost:8001/predict_one",
-            json={"file": file}
-        )
-        response.raise_for_status()
+        # Create temp directory if it doesn't exist
+        Path("temp").mkdir(exist_ok=True)
+        
+        # temp saving file
+        file_path = f"temp/{file.filename}"
+        with open(file_path, "wb") as temp_f:
+            temp_f.write(await file.read())
+        
+        try:
+            # original
+            with open(file_path, "rb") as f:
+                response = http_requests.post(
+                    "http://localhost:8001/predict_one",
+                    files={"file": (Path(file_path).name, f, f"image/{Path(file_path).suffix[1:]}")}
+                )
+            
+            # Check if model returned an error
+            if response.status_code != 200:
+                return fastapi.responses.JSONResponse(
+                    status_code=response.status_code,
+                    content=response.json()
+                )
+            
+            return response.json()
+        finally:
+            # Clean up temp file
+            if Path(file_path).exists():
+                os.remove(file_path)
+        
         return response.json()
     except Exception as e:
         return fastapi.responses.JSONResponse(
