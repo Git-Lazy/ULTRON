@@ -30,7 +30,7 @@ def load_class_names_from_json():
 load_class_names_from_json()
 
 
-
+    
 def add_class_name(class_name):
     global class_names
     if class_name not in class_names:
@@ -48,17 +48,17 @@ def delete_example_images_for_class(class_name):
         delete_folder(example_images_folder)
 
 def add_example_image(example_path, class_name, vector=None):
-
+    
     if class_name not in class_names:
         class_names.append(class_name)
     copy_image(example_path, f"examples/{class_name}")
     dest_path = f"examples/{class_name}/{Path(example_path).name}"
-
+    
     if vector is None:
         vector = get_prediction_from_model(example_path)
     json_path = dest_path + ".json"
     Path(json_path).write_text(json.dumps(vector))
-
+    
 
 
 def save_class_names_to_json(class_names):
@@ -283,9 +283,11 @@ def get_cosine_similarity(vec1, vec2):
         return 0.0
     return dot_product / (magnitude_vec1 * magnitude_vec2)
 
-def weighted_cosine_similarity(vec, vec_list):
+def weighted_cosine_similarity(vec, vec_list): #(vec, vec_list): # (vec_list, exampleEmbeddings): # this is here because I am making changes
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # exampleEmbeddings = exampleEmbeddings.to(device)
     # example_norm = torch.nn.functional.normalize(exampleEmbeddings, p=2, dim=1).to(device)
-    # embeddings = model(batch)
+    # embeddings = vec_list.to(device)
     # batch_norm = torch.nn.functional.normalize(embeddings, p=2, dim=1)
     # similarities = batch_norm @ example_norm.T
     # weights = torch.nn.functional.softmax(similarities, dim=1)
@@ -297,6 +299,7 @@ def weighted_cosine_similarity(vec, vec_list):
     weights = [s / total_similarity for s in similarities]
     average_weighted_similarity = total_similarity*sum(weights) / len(vec_list)
     return average_weighted_similarity
+    # return weighted_similarities.cpu().tolist()
     # average_similarity = total_similarity / len(vec_list)
     # return average_similarity
 
