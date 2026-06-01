@@ -1,11 +1,12 @@
-import backend
 import fastapi
 import uvicorn
 from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
 import requests as http_requests
+import backend
 from fastapi import FastAPI, File, UploadFile, responses
+import time
 
 
 load_dotenv()
@@ -100,17 +101,23 @@ def health_check():
     return fastapi.responses.JSONResponse(status_code=200, content={"status": "healthy"})
 
 
-# @app.get("/shutdown")
-# def shutdown():
-#     try:
-#         response = http_requests.get(
-#             f"http://localhost:8001/shutdown"
-#         )
-#         uvicorn.should_exit = True
-#         uvicorn.force_exit = True
-#         return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
-#     except Exception as e:
-#         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
+server: uvicorn.Server = None  # will hold the real running instance
+
+@app.get("/shutdown")
+async def shutdown():
+    try:
+        response = http_requests.get("http://localhost:8001/shutdown")
+        while response.status_code != 200:
+            print("Failed to shutdown model server, retrying...")
+            time.sleep(1)
+            response = http_requests.get("http://localhost:8001/shutdown")
+        print("model server shutdown initiated")
+        server.should_exit = True
+        return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
+    except Exception as e:
+        return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000)
+    server = uvicorn.Server(config)
+    server.run()

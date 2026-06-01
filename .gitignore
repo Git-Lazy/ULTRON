@@ -444,3 +444,5 @@ Food_Classification_dataset/
 Food_Classification_dataset_copy/
 nature/
 dataset42/
+dist
+build

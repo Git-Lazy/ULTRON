@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Ultron</title>
+    <link rel="icon" type="image/x-icon" href="frontend\images\favicon.ico">
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
 </head>
@@ -30,8 +31,12 @@
             <div class="panel">
                 <h2 class="panel-title">Upload</h2>
 
-                <div class="upload-section">
-                    <h3 class="subsection-title">Image</h3>
+                <div class="upload-section upload-section--training">
+                    <h3 class="subsection-title">
+                        <span class="step-badge">1</span>
+                        Define Class
+                    </h3>
+                    <p class="section-hint">Train the model by selecting a class or adding your own example images.</p>
 
                     <div class="class-selector">
                         <span class="field-label">Class</span>
@@ -42,21 +47,34 @@
                     </div>
 
                     <div class="custom-class-form" id="custom-class-form" hidden>
-                        <input type="text" class="text-input" id="custom-class-name" placeholder="Class name" autocomplete="off">
-                        <label class="upload-zone upload-zone--small" for="custom-class-examples">
+                        <span class="form-header">New Custom Class</span>
+                        <input type="text" class="text-input" id="custom-class-name" placeholder="Class name (required)" autocomplete="off">
+                        <label class="upload-zone upload-zone--small upload-zone--training" for="custom-class-examples">
                             <input type="file" id="custom-class-examples" accept="image/*" multiple hidden onchange="handleCustomClassExamples(event)">
-                            <span class="upload-hint">Add example images</span>
+                            <span class="upload-hint">Add example images (at least 1 required)</span>
                         </label>
                         <div class="image-grid image-grid--small" id="custom-class-images"></div>
+                        <div class="form-error" id="custom-class-error" hidden></div>
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" onclick="saveCustomClass()">Save</button>
                             <button type="button" class="btn-secondary btn-secondary--ghost" onclick="cancelCustomClass()">Cancel</button>
                         </div>
                     </div>
+                    <div id="custom-class-replace" hidden>
+                        <h4 class="subsection-title">Custom Class Examples</h4>
+                        <div class="image-grid image-grid--small" id="custom-class-replace-grid"></div>
+                    </div>
+                </div>
 
-                    <label class="upload-zone" for="upload-input">
+                <div class="upload-section upload-section--model">
+                    <h3 class="subsection-title">
+                        <span class="step-badge">2</span>
+                        Classify Image
+                    </h3>
+                    <p class="section-hint">Drop an image below to send it to the model.</p>
+                    <label class="upload-zone upload-zone--model" for="upload-input">
                         <input type="file" id="upload-input" accept="image/*" hidden onchange="handleImageUpload(event)">
-                        <span class="upload-hint">Drop image or click to select</span>
+                        <span class="upload-hint">Drop image to classify</span>
                     </label>
                     <div class="image-grid" id="uploaded-images" aria-label="Uploaded images"></div>
                 </div>
@@ -74,8 +92,17 @@
 
             <div class="panel">
                 <h2 class="panel-title">Output</h2>
-                <div class="image-grid" id="output-images" aria-label="Output images">
-                    <div class="image-placeholder">Awaiting response...</div>
+
+                <div id="custom-class-examples-display" hidden>
+                    <span class="field-label">Examples for <span id="selected-class-name"></span></span>
+                    <div class="image-grid" id="custom-class-examples-grid" aria-label="Class example images"></div>
+                </div>
+
+                <div id="output-results-display">
+                    <span class="field-label">Results</span>
+                    <div class="image-grid" id="output-images" aria-label="Output images">
+                        <div class="image-placeholder">Awaiting response...</div>
+                    </div>
                 </div>
             </div>
         </section>
