@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 # import piexif
 import requests as http_requests
+import torch
 
 old_path = Path("dataset/")
 new_path = Path("sorted_images/")
@@ -282,9 +283,11 @@ def get_cosine_similarity(vec1, vec2):
         return 0.0
     return dot_product / (magnitude_vec1 * magnitude_vec2)
 
-def weighted_cosine_similarity(vec, vec_list):
+def weighted_cosine_similarity(vec, vec_list): #(vec, vec_list): # (vec_list, exampleEmbeddings): # this is here because I am making changes
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # exampleEmbeddings = exampleEmbeddings.to(device)
     # example_norm = torch.nn.functional.normalize(exampleEmbeddings, p=2, dim=1).to(device)
-    # embeddings = model(batch)
+    # embeddings = vec_list.to(device)
     # batch_norm = torch.nn.functional.normalize(embeddings, p=2, dim=1)
     # similarities = batch_norm @ example_norm.T
     # weights = torch.nn.functional.softmax(similarities, dim=1)
@@ -296,6 +299,7 @@ def weighted_cosine_similarity(vec, vec_list):
     weights = [s / total_similarity for s in similarities]
     average_weighted_similarity = total_similarity*sum(weights) / len(vec_list)
     return average_weighted_similarity
+    # return weighted_similarities.cpu().tolist()
     # average_similarity = total_similarity / len(vec_list)
     # return average_similarity
 
@@ -341,9 +345,9 @@ def sort_images(folder_path):
 
 # get_predictions_plural_from_model(str(old_path))
 
-list_images_in_folder(str(old_path))
-move_images_to_sorted_folder(images, str(old_path), str(new_path))
-save_class_names_to_json(class_names)
+# list_images_in_folder(str(old_path))
+# move_images_to_sorted_folder(images, str(old_path), str(new_path))
+# save_class_names_to_json(class_names)
 # delete_folder(str(old_path))
 
 

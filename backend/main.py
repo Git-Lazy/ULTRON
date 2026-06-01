@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
 import requests as http_requests
+from fastapi import FastAPI, File, UploadFile, responses
 
 
 load_dotenv()
@@ -72,11 +73,11 @@ def delete_item(class_name: str):
 
 
 @app.post("/predict")
-def predict(req: PredictionRequest):
+def predict(file: UploadFile = File(...)):
     try:
         response = http_requests.post(
-            f"http://localhost:8001/predict",
-            json={"features": req.features}
+            f"http://localhost:8001/predict_one",
+            json={"file": file.filename}
         )
         return response.json()
     except Exception as e:
@@ -98,20 +99,15 @@ def sort_images(folder_path: str):
 def health_check():
     return fastapi.responses.JSONResponse(status_code=200, content={"status": "healthy"})
 
-# @app.on_event("shutdown")
-# def shutdown_event():
 
 @app.get("/shutdown")
 def shutdown():
     try:
-        # Perform any necessary cleanup here
-        # For example, you could close database connections or release resources
-        # Then, shut down the server
         response = http_requests.get(
             f"http://localhost:8001/shutdown"
         )
-        uvicorn_server = uvicorn.Server(uvicorn.Config(app))
-        uvicorn_server.should_exit = True
+        uvicorn.should_exit = True
+        uvicorn.force_exit = True
         return fastapi.responses.JSONResponse(status_code=200, content={"status": "shutdown initiated"})
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
