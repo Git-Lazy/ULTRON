@@ -5,6 +5,8 @@ import os
 import socketserver
 import threading
 import sys
+import urllib.error
+import urllib.request
 
 try:
     import webview
@@ -60,14 +62,73 @@ class Api:
 PORT = 3000
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
+# The backend runs on a different port, so a browser fetch from this page would
+# be cross-origin and get blocked by CORS. Instead the page calls same-origin
+# (localhost:3000) and we forward anything under these prefixes to the backend.
+BACKEND_BASE = "http://localhost:8000"
+PROXY_PREFIXES = ("/health", "/classes", "/examples", "/search",
+                    "/predict", "/sort", "/shutdown", "/api")
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=STATIC_DIR, **kwargs)
 
+    def _should_proxy(self):
+        return self.path.startswith(PROXY_PREFIXES)
+
+    def _proxy(self):
+        """Forward the current request to the backend and relay its response."""
+        length = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(length) if length else None
+
+        req = urllib.request.Request(BACKEND_BASE + self.path, data=body, method=self.command)
+        for key, value in self.headers.items():
+            # Skip hop-by-hop / host headers; urllib sets these itself.
+            if key.lower() in ("host", "content-length", "connection"):
+                continue
+            req.add_header(key, value)
+
+        try:
+            with urllib.request.urlopen(req) as resp:
+                self._relay(resp.status, resp.headers, resp.read())
+        except urllib.error.HTTPError as e:
+            # Backend answered with a 4xx/5xx; pass it through unchanged.
+            self._relay(e.code, e.headers, e.read())
+        except Exception as e:
+            self.send_error(502, f"Backend unreachable via proxy: {e}")
+
+    def _relay(self, status, headers, payload):
+        self.send_response(status)
+        ctype = headers.get("Content-Type")
+        if ctype:
+            self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def do_GET(self):
+        if self._should_proxy():
+            self._proxy()
+        else:
+            super().do_GET()
+
+    def do_POST(self):
+        self._proxy()
+
+    def do_DELETE(self):
+        self._proxy()
+
+
+# ThreadingTCPServer so a slow backend call (e.g. /predict, /sort) doesn't block
+# the page from loading its other static assets in the meantime.
+class ThreadingHTTPServer(socketserver.ThreadingTCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
 
 def start_server():
-    with socketserver.TCPServer(("", PORT), Handler) as httpd:
+    with ThreadingHTTPServer(("", PORT), Handler) as httpd:
         print(f"Frontend server running on http://localhost:{PORT}")
         httpd.serve_forever()
 

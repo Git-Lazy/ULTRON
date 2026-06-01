@@ -5,18 +5,41 @@ const state = {
     customClasses: [],
     selectedClass: null,
     pendingCustomExamples: [],
-    // Deferred selections: real absolute paths held until the user clicks
-    // "Send", so a mis-click can be changed before anything reaches the backend.
     classifyPath: null,
+    classifySrc: null,
     folderPath: null,
 };
 
-// pywebview exposes Python under window.pywebview.api. When absent (plain
-// browser / Docker headless) we fall back to the hidden <input type=file>,
-// which only yields a sandboxed file name rather than a real path.
 function hasNativePicker() {
     return !!(window.pywebview && window.pywebview.api && window.pywebview.api.pick_image);
 }
+
+// Forward console messages to the hosting Python process when running inside
+// pywebview so logs appear in the application console rather than only the
+// webview devtools. We keep the original behavior too.
+(function () {
+    try {
+        const wrap = (level) => {
+            const orig = console[level].bind(console);
+            console[level] = function (...args) {
+                try {
+                    if (window.pywebview && window.pywebview.api && window.pywebview.api.log) {
+                        const text = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+                        // call but don't await; pywebview returns a promise
+                        window.pywebview.api.log(`[${level}] ${text}`).catch(() => {});
+                    }
+                } catch (_) {}
+                orig(...args);
+            };
+        };
+        wrap('log');
+        wrap('info');
+        wrap('warn');
+        wrap('error');
+    } catch (_) {
+        // ignore if console cannot be wrapped
+    }
+})();
 
 // Text renderer for prediction results (renderOutput is for image URLs).
 function renderPredictions(lines) {
@@ -117,7 +140,7 @@ function renderCustomClassExamples() {
     for (const filePath of customClass.examplePaths) {
         const img = document.createElement('img');
         const filename = filePath.split(/[\\/]/).pop();
-        img.src = `${API_BASE}/api/examples/${encodeURIComponent(customClass.name)}/${encodeURIComponent(filename)}`;
+        img.src = `${API_BASE}/examples/${encodeURIComponent(customClass.name)}/${encodeURIComponent(filename)}`;
         img.className = 'thumb';
         img.alt = filename;
         img.onerror = () => { img.alt = `Failed to load ${filename}`; };
@@ -150,7 +173,7 @@ async function pingBackend() {
 
 async function loadPremadeClasses() {
     try {
-        const res = await fetch(`${API_BASE}/api/classes`);
+        const res = await fetch(`${API_BASE}/classes/`);
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data.classes)) {
@@ -164,7 +187,7 @@ async function loadPremadeClasses() {
 
 async function loadSavedExamples() {
     try {
-        const res = await fetch(`${API_BASE}/api/examples`);
+        const res = await fetch(`${API_BASE}/examples/`);
         if (!res.ok) return;
         const data = await res.json();
         const examples = data.examples || {};
@@ -245,14 +268,14 @@ async function saveCustomClass() {
     setStatus('Saving class...');
     try {
         // Inform backend about new class (no files)
-        const res = await fetch(`${API_BASE}/api/classes?class_name=${encodeURIComponent(name)}`, {
+        const res = await fetch(`${API_BASE}/classes/?class_name=${encodeURIComponent(name)}`, {
             method: 'POST'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline (class saving issue: change)', false);
+        setStatus('Unable to save class', false);
     }
 
     cancelCustomClass();
@@ -280,6 +303,7 @@ function setClassifyPreview(src, path, label) {
     target.appendChild(img);
 
     state.classifyPath = path;
+    state.classifySrc = src;
     const sendBtn = document.getElementById('classify-send');
     if (sendBtn) sendBtn.disabled = false;
 }
@@ -316,20 +340,27 @@ async function sendClassifyImage() {
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Classifying...');
     try {
-        // get_prediction_from_model expects the image *path*, not the bytes.
-        const res = await fetch(`${API_BASE}/api/predict-image`, {
+        // main.py exposes POST /predict expecting a multipart "file" upload, so
+        // rebuild the bytes from the preview source (data:/blob: URL) and send
+        // them as a file named after the picked image.
+        const filename = imagePath.split(/[\\/]/).pop();
+        const blob = await (await fetch(state.classifySrc)).blob();
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+        const res = await fetch(`${API_BASE}/predict`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_path: imagePath })
+            body: formData
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const text = await res.text();
+        console.log('predict response status', res.status, 'body:', text);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+        const data = JSON.parse(text);
         const name = data.class_name || 'No matching class';
-        renderPredictions([`${imagePath.split(/[\\/]/).pop()} → ${name}`]);
+        renderPredictions([`${filename} → ${name}`]);
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline (classify issue: change)', false);
+        setStatus('Unable to classify image', false);
     } finally {
         if (sendBtn) sendBtn.disabled = false;
     }
@@ -393,9 +424,6 @@ async function sendFolder() {
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Sorting folder...');
     try {
-        // Backend exposes POST /sort?folder_path=... (folder_path is a query
-        // param), which starts sorting and returns {status} rather than the
-        // per-file {results} the original /api/predict-folder contract promised.
         const res = await fetch(`${API_BASE}/sort?folder_path=${encodeURIComponent(folderPath)}`, {
             method: 'POST'
         });
@@ -405,7 +433,7 @@ async function sendFolder() {
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline (folder sort issue: change)', false);
+        setStatus('Unable to sort folder', false);
     } finally {
         if (sendBtn) sendBtn.disabled = false;
     }
@@ -416,18 +444,14 @@ async function handleSearch() {
     if (!query) return;
     setStatus('Querying...');
     try {
-        // Backend exposes GET /api/search?query=... returning {results: [paths]}
-        // (the POST /api/query {images} endpoint this UI was written for does
-        // not exist). Paths are server-side file paths, so the thumbnails will
-        // only resolve once the backend serves those images over HTTP.
-        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(query)}`);
+        const res = await fetch(`${API_BASE}/search/?query=${encodeURIComponent(query)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         renderOutput(data.results);
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        setStatus('Backend offline (search issue: change)', false);
+        setStatus('Unable to search', false);
     }
 }
 
@@ -472,7 +496,7 @@ function renderCustomClassExamplesShowHide() {
     for (const filePath of customClass.examplePaths) {
         const img = document.createElement('img');
         const filename = filePath.split(/[\\\\/]/).pop();
-        img.src = `${API_BASE}/api/examples/${encodeURIComponent(customClass.name)}/${encodeURIComponent(filename)}`;
+        img.src = `${API_BASE}/examples/${encodeURIComponent(customClass.name)}/${encodeURIComponent(filename)}`;
         img.className = 'thumb';
         img.alt = filename;
         img.onerror = () => { img.alt = `Failed to load ${filename}`; };
@@ -481,5 +505,5 @@ function renderCustomClassExamplesShowHide() {
 }
 
 renderClassList();
-pingBackend();
 loadPremadeClasses().then(loadSavedExamples);
+pingBackend();

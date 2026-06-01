@@ -1,4 +1,5 @@
 import fastapi
+import mimetypes
 import uvicorn
 from dotenv import load_dotenv
 import os
@@ -34,10 +35,20 @@ def read_items():
 @app.get("/examples/")
 def read_items():
     try:
-        examples = backend.get_example_images()
+        examples = {}
+        for cls in backend.class_names:
+            examples[cls] = backend.get_example_images(cls)
         return fastapi.responses.JSONResponse(status_code=200, content={"examples": examples})
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/examples/{class_name}/{filename}")
+def read_example_image(class_name: str, filename: str):
+    file_path = os.path.join("examples", class_name, filename)
+    if not os.path.isfile(file_path):
+        return fastapi.responses.JSONResponse(status_code=404, content={"error": "File not found"})
+    media_type, _ = mimetypes.guess_type(file_path)
+    return responses.FileResponse(file_path, media_type=media_type or "application/octet-stream")
 
 @app.get("/search/")
 def search_items(query: str):
@@ -72,21 +83,22 @@ def delete_item(class_name: str):
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 
-
 @app.post("/predict")
-def predict(file: UploadFile = File(...)):
+#CHANGED SLIGHTLY TO ACCEPT FILE UPLOADS INSTEAD OF PATHS
+async def predict(file: UploadFile = File(...)):
     try:
+        content = await file.read()
         response = http_requests.post(
-            f"http://localhost:8001/predict_one",
-            json={"file": file.filename}
+            "http://localhost:8001/predict_one",
+            files={"file": (file.filename, content, file.content_type)}
         )
+        response.raise_for_status()
         return response.json()
     except Exception as e:
         return fastapi.responses.JSONResponse(
             status_code=500,
             content={"error": f"Model service error: {str(e)}"}
         )
-        
 
 @app.post("/sort")
 def sort_images(folder_path: str):
