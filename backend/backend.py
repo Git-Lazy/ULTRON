@@ -177,7 +177,10 @@ def get_image_class_name(image_path):
         json_tags = Path(json_path).read_text()
         tags = json.loads(json_tags)
     if tags is not None:
-        return max(tags, key=tags.get)  # return the class name with the highest weighted cosine similarity score
+        try:
+            return max(tags, key=tags.get)  # return the class name with the highest weighted cosine similarity score
+        except Exception as e:
+            return None
     return None
 
 def get_prediction_from_model(image_path):
