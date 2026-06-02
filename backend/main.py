@@ -89,7 +89,7 @@ class PredictRequest(BaseModel):
 
 
 @app.post("/predict")
-async def predict(file: UploadFile | None = File(None), payload: PredictRequest = Body(None)):
+async def predict(image_path: str):
     try:
         if payload and payload.file_path:
             file_path = payload.file_path
@@ -104,32 +104,39 @@ async def predict(file: UploadFile | None = File(None), payload: PredictRequest 
             return fastapi.responses.JSONResponse(status_code=400, content={"error": "file or file_path is required"})
 
         # Create temp directory if it doesn't exist
-        Path("temp").mkdir(exist_ok=True)
+        # Path("temp").mkdir(exist_ok=True)
         
-        # temp saving file
-        file_path = f"temp/{file.filename}"
-        with open(file_path, "wb") as temp_f:
-            temp_f.write(await file.read())
+        # # temp saving file
+        # file_path = f"temp/{file.filename}"
+        # with open(file_path, "wb") as temp_f:
+        #     temp_f.write(await file.read())
         
-        try:
-            with open(file_path, "rb") as f:
-                response = http_requests.post(
-                    "http://localhost:8001/predict_one",
-                    files={"file": (Path(file_path).name, f, f"image/{Path(file_path).suffix[1:]}")}
-                )
+            # original
+            # with open(file_path, "rb") as f:
+            #     response = http_requests.post(
+            #         "http://localhost:8001/predict_one",
+            #         files={"file": (Path(file_path).name, f, f"image/{Path(file_path).suffix[1:]}")}
+            #     )
+        if backend.get_image_class_name(image_path) is not None:
+            return fastapi.responses.JSONResponse(status_code=200, content={"class": backend.get_image_class_name(image_path)})
+        else:
+            vector = backend.get_prediction_from_model(image_path)
+            backend.set_image_tags(image_path, vector)
+            return fastapi.responses.JSONResponse(status_code=200, content={"class": backend.get_image_class_name(image_path)})
             
-            if response.status_code != 200:
-                return fastapi.responses.JSONResponse(
-                    status_code=response.status_code,
-                    content=response.json()
-                )
+            # Check if model returned an error
+            # if response.status_code != 200:
+            #     return fastapi.responses.JSONResponse(
+            #         status_code=response.status_code,
+            #         content=response.json()
+            #     )
             
-            return response.json()
-        finally:
-            if Path(file_path).exists():
-                os.remove(file_path)
-        
-        return response.json()
+            # return response.json()
+        # finally:
+        #     # Clean up temp file
+        #     if Path(file_path).exists():
+        #         os.remove(file_path)
+                
     except Exception as e:
         return fastapi.responses.JSONResponse(
             status_code=500,
