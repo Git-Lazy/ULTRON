@@ -171,6 +171,7 @@ def is_image_file(file_path):
 
 
 def get_image_class_name(image_path):
+    tags = None
     json_path = str(image_path) + ".json"
     if Path(json_path).exists():
         json_tags = Path(json_path).read_text()

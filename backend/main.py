@@ -127,7 +127,7 @@ async def predict(image_path: str):
     except Exception as e:
         return fastapi.responses.JSONResponse(
             status_code=500,
-            content={"error": f"Model service error: {str(e)}"}
+            content={"error": f"Prediction error: {str(e)}"}
         )
 
 @app.post("/sort")
