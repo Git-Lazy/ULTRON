@@ -91,18 +91,6 @@ class PredictRequest(BaseModel):
 @app.post("/predict")
 async def predict(image_path: str):
     try:
-        if payload and payload.file_path:
-            file_path = payload.file_path
-            if not Path(file_path).is_file():
-                return fastapi.responses.JSONResponse(status_code=400, content={"error": f"File path not found: {file_path}"})
-            response = backend.get_prediction_from_model(file_path)
-            if response is None:
-                return fastapi.responses.JSONResponse(status_code=500, content={"error": "Model returned no prediction"})
-            return response
-
-        if file is None:
-            return fastapi.responses.JSONResponse(status_code=400, content={"error": "file or file_path is required"})
-
         # Create temp directory if it doesn't exist
         # Path("temp").mkdir(exist_ok=True)
         

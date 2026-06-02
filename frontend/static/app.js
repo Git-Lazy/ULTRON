@@ -8,6 +8,7 @@ const state = {
     classifyPath: null,
     classifySrc: null,
     folderPath: null,
+    pendingFolderFiles: [],
 };
 
 function hasNativePicker() {
@@ -341,37 +342,29 @@ async function sendClassifyImage() {
     setStatus('Classifying...');
     try {
         const filename = imagePath.split(/[\\/]/).pop();
-        let res;
-        if (imagePath.includes('\\') || imagePath.includes('/')) {
-            bridgeLog(`sending /predict for ${imagePath} as file_path`);
-            res = await fetch(`${API_BASE}/predict`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_path: imagePath })
-            });
-        } else {
-            const blob = await (await fetch(state.classifySrc)).blob();
-            const formData = new FormData();
-            formData.append('file', blob, filename);
-            bridgeLog(`sending /predict for ${filename}`);
-            res = await fetch(`${API_BASE}/predict`, {
-                method: 'POST',
-                body: formData
-            });
-        }
+        // The backend reads the image from disk, so we only send the file path
+        // as a string (via the image_path query parameter).
+        bridgeLog(`sending /predict for ${imagePath}`);
+        const res = await fetch(`${API_BASE}/predict?image_path=${encodeURIComponent(imagePath)}`, {
+            method: 'POST'
+        });
         const text = await res.text();
         if (!res.ok) {
             bridgeLog(`predict HTTP error ${res.status} body: ${text}`);
             throw new Error(`HTTP ${res.status}: ${text}`);
         }
         const data = JSON.parse(text);
-        const name = data.class_name || 'No matching class';
-        bridgeLog(`predict parsed class_name=${name}`);
+        const name = data.class || data.class_name || 'No matching class';
+        bridgeLog(`predict parsed class=${name}`);
         renderPredictions([`${filename} → ${name}`]);
         setStatus('System online');
     } catch (err) {
         console.error(err);
-        bridgeLog(`sendClassifyImage error: ${err}`);
+        const detail = (err && err.message) ? err.message : String(err);
+        bridgeLog(`sendClassifyImage error: ${detail}`);
+        // Surface the backend's actual error (it comes back in the 500 body) so
+        // it's visible in the UI instead of being swallowed.
+        renderPredictions([detail]);
         setStatus('Unable to classify image', false);
     } finally {
         if (sendBtn) sendBtn.disabled = false;
@@ -411,12 +404,13 @@ function handleFolderUpload(event) {
     if (files.length === 0) {
         document.getElementById('folder-summary').textContent = 'No images found';
         state.folderPath = null;
+        state.pendingFolderFiles = [];
         const sendBtn = document.getElementById('folder-send');
         if (sendBtn) sendBtn.disabled = true;
         return;
     }
 
-    const folderName = files[0].webkitRelativePath.split('/')[0] || 'folder';
+    const folderName = (files[0].webkitRelativePath && files[0].webkitRelativePath.split('/')[0]) || 'folder';
     for (const file of files.slice(0, 24)) {
         const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
@@ -424,6 +418,8 @@ function handleFolderUpload(event) {
         img.alt = file.name;
         grid.appendChild(img);
     }
+    // Store actual File objects so we can convert to base64 when sending
+    state.pendingFolderFiles = files;
     setFolderSelection(folderName);
     event.target.value = '';
 }
@@ -436,10 +432,12 @@ async function sendFolder() {
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Sorting folder...');
     try {
+        // The backend expects the folder path as a raw JSON string
+        // (folder_path: str = Body(...)).
         const res = await fetch(`${API_BASE}/sort`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ folder_path: folderPath })
+            body: JSON.stringify(folderPath)
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
