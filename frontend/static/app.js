@@ -341,14 +341,24 @@ async function sendClassifyImage() {
     setStatus('Classifying...');
     try {
         const filename = imagePath.split(/[\\/]/).pop();
-        const blob = await (await fetch(state.classifySrc)).blob();
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-        bridgeLog(`sending /predict for ${filename}`);
-        const res = await fetch(`${API_BASE}/predict`, {
-            method: 'POST',
-            body: formData
-        });
+        let res;
+        if (imagePath.includes('\\') || imagePath.includes('/')) {
+            bridgeLog(`sending /predict for ${imagePath} as file_path`);
+            res = await fetch(`${API_BASE}/predict`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_path: imagePath })
+            });
+        } else {
+            const blob = await (await fetch(state.classifySrc)).blob();
+            const formData = new FormData();
+            formData.append('file', blob, filename);
+            bridgeLog(`sending /predict for ${filename}`);
+            res = await fetch(`${API_BASE}/predict`, {
+                method: 'POST',
+                body: formData
+            });
+        }
         const text = await res.text();
         if (!res.ok) {
             bridgeLog(`predict HTTP error ${res.status} body: ${text}`);
@@ -426,8 +436,10 @@ async function sendFolder() {
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Sorting folder...');
     try {
-        const res = await fetch(`${API_BASE}/sort?folder_path=${encodeURIComponent(folderPath)}`, {
-            method: 'POST'
+        const res = await fetch(`${API_BASE}/sort`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder_path: folderPath })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();

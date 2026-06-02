@@ -10,7 +10,8 @@ import os
 from pydantic import BaseModel
 import requests as http_requests
 import backend
-from fastapi import FastAPI, File, UploadFile, responses
+from typing import Optional
+from fastapi import FastAPI, File, UploadFile, Body, responses
 import time
 
 
@@ -18,10 +19,6 @@ load_dotenv()
 
 
 app = fastapi.FastAPI()
-
-
-class PredictionRequest(BaseModel):
-    features: list[float]
 
 
 @app.get("/")
@@ -87,9 +84,25 @@ def delete_item(class_name: str):
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 
+class PredictRequest(BaseModel):
+    file_path: Optional[str] = None
+
+
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile | None = File(None), payload: PredictRequest = Body(None)):
     try:
+        if payload and payload.file_path:
+            file_path = payload.file_path
+            if not Path(file_path).is_file():
+                return fastapi.responses.JSONResponse(status_code=400, content={"error": f"File path not found: {file_path}"})
+            response = backend.get_prediction_from_model(file_path)
+            if response is None:
+                return fastapi.responses.JSONResponse(status_code=500, content={"error": "Model returned no prediction"})
+            return response
+
+        if file is None:
+            return fastapi.responses.JSONResponse(status_code=400, content={"error": "file or file_path is required"})
+
         # Create temp directory if it doesn't exist
         Path("temp").mkdir(exist_ok=True)
         
@@ -99,14 +112,12 @@ async def predict(file: UploadFile = File(...)):
             temp_f.write(await file.read())
         
         try:
-            # original
             with open(file_path, "rb") as f:
                 response = http_requests.post(
                     "http://localhost:8001/predict_one",
                     files={"file": (Path(file_path).name, f, f"image/{Path(file_path).suffix[1:]}")}
                 )
             
-            # Check if model returned an error
             if response.status_code != 200:
                 return fastapi.responses.JSONResponse(
                     status_code=response.status_code,
@@ -115,7 +126,6 @@ async def predict(file: UploadFile = File(...)):
             
             return response.json()
         finally:
-            # Clean up temp file
             if Path(file_path).exists():
                 os.remove(file_path)
         
@@ -127,7 +137,7 @@ async def predict(file: UploadFile = File(...)):
         )
 
 @app.post("/sort")
-def sort_images(folder_path: str):
+def sort_images(folder_path: str = Body(...)):
     try:
         backend.sort_images(folder_path)
         return fastapi.responses.JSONResponse(status_code=200, content={"status": "sorting started"})
