@@ -49,10 +49,10 @@
                     <div class="custom-class-form" id="custom-class-form" hidden>
                         <span class="form-header">New Custom Class</span>
                         <input type="text" class="text-input" id="custom-class-name" placeholder="Class name (required)" autocomplete="off">
-                        <label class="upload-zone upload-zone--small upload-zone--training" for="custom-class-examples">
+                        <div class="upload-zone upload-zone--small upload-zone--training" onclick="pickCustomClassExamples()">
                             <input type="file" id="custom-class-examples" accept="image/*" multiple hidden onchange="handleCustomClassExamples(event)">
                             <span class="upload-hint">Add example images (at least 1 required)</span>
-                        </label>
+                        </div>
                         <div class="image-grid image-grid--small" id="custom-class-images"></div>
                         <div class="form-error" id="custom-class-error" hidden></div>
                         <div class="form-actions">

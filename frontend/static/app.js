@@ -214,18 +214,52 @@ function toggleCustomClassForm() {
     if (form.hidden) cancelCustomClass();
 }
 
-function handleCustomClassExamples(event) {
+// Push one example onto the pending list and show its thumbnail. Examples are
+// stored as { path, dataUrl, name }; `path` is the real disk path the backend
+// needs to copy the file (null when only a browser input was available).
+function addPendingCustomExample(example) {
+    state.pendingCustomExamples.push(example);
     const grid = document.getElementById('custom-class-images');
+    const img = document.createElement('img');
+    img.src = example.dataUrl;
+    img.className = 'thumb';
+    img.alt = example.name;
+    grid.appendChild(img);
+    showCustomClassError(null);
+}
+
+// Native dialog returns a real path (one image per click); browser falls back
+// to the hidden multi-file input.
+async function pickCustomClassExamples() {
+    if (!hasNativePicker()) {
+        document.getElementById('custom-class-examples').click();
+        return;
+    }
+    try {
+        const picked = await window.pywebview.api.pick_image();
+        if (!picked) return;
+        addPendingCustomExample({
+            path: picked.path,
+            dataUrl: picked.data_url,
+            name: picked.path.split(/[\\/]/).pop(),
+        });
+    } catch (err) {
+        console.error(err);
+        setStatus('Could not open file dialog', false);
+    }
+}
+
+// Browser fallback only: File objects expose just a sandboxed name, not a real
+// path, so the backend can't copy these (path stays null).
+function handleCustomClassExamples(event) {
     const files = Array.from(event.target.files);
     for (const file of files) {
-        state.pendingCustomExamples.push(file);
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        img.className = 'thumb';
-        img.alt = file.name;
-        grid.appendChild(img);
+        addPendingCustomExample({
+            path: null,
+            dataUrl: URL.createObjectURL(file),
+            name: file.name,
+        });
     }
-    if (state.pendingCustomExamples.length > 0) showCustomClassError(null);
     event.target.value = '';
 }
 
@@ -257,40 +291,46 @@ async function saveCustomClass() {
         document.getElementById('custom-class-examples').focus();
         return;
     }
+
+    // The backend copies each example from its disk path, so we can only save
+    // examples that were chosen with the native picker (real paths).
+    const examplePaths = examples.map(e => e.path).filter(Boolean);
+    if (examplePaths.length === 0) {
+        showCustomClassError('Example images must be chosen with the file picker so they can be saved.');
+        return;
+    }
     showCustomClassError(null);
 
-    // Convert example files to data URLs for local display
-    const dataUrls = await Promise.all(examples.map(f => readFileAsDataURL(f)));
-
-    const customEntry = { name, examples: dataUrls, examplePaths: [] };
+    const customEntry = {
+        name,
+        examples: examples.map(e => e.dataUrl),
+        examplePaths,
+    };
     state.customClasses.push(customEntry);
     state.selectedClass = name;
 
     setStatus('Saving class...');
     try {
-        // Inform backend about new class (no files)
-        const res = await fetch(`${API_BASE}/classes/?class_name=${encodeURIComponent(name)}`, {
-            method: 'POST'
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Save each example by sending its file path as a string. The backend
+        // copies it into examples/<class_name>, computes its embedding, and
+        // registers the class along the way.
+        for (const path of examplePaths) {
+            const res = await fetch(
+                `${API_BASE}/examples/?example_path=${encodeURIComponent(path)}&class_name=${encodeURIComponent(name)}`,
+                { method: 'POST' }
+            );
+            if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        }
         setStatus('System online');
     } catch (err) {
         console.error(err);
+        bridgeLog(`saveCustomClass error: ${err.message || err}`);
         setStatus('Unable to save class', false);
     }
 
     cancelCustomClass();
     renderClassList();
     renderCustomClassExamplesShowHide();
-}
-
-function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
 }
 
 // Show a single preview thumbnail and arm the Send button for the chosen image.
