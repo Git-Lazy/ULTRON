@@ -282,16 +282,10 @@ def move_images_to_sorted_folder(images, old_path, new_path):
     print(f"total predictions: {totalPredictions}")
     for image, folderName in images:
         if is_image_file(image):
-            indexi += 1
-            if indexi > 1000:
-                indexi = 0
-                indexF += 1
+            
             if indexF >= len(predictions):
                 print(f"No more predictions available for file '{image}'. Skipping.")
                 break
-            if indexi >= len(predictions[indexF]):
-                indexi = 0
-                indexF += 1
                 # print(f"No more predictions available in batch {indexF} for file '{image}'. Skipping.")
                 # continue
             # add_example_image(image, folderName, predictions[indexF][indexi])
@@ -303,6 +297,14 @@ def move_images_to_sorted_folder(images, old_path, new_path):
             else:
                 move_image(image, f"{new_path}/{folderName}")
                 move_image(str(image) + ".json", f"{new_path}/{folderName}")
+            indexi += 1
+            if indexi >= 1000:
+                indexi = 0
+                indexF += 1
+            
+            if indexi >= len(predictions[indexF]):
+                indexi = 0
+                indexF += 1
         else:
             print(f"File '{image}' is not a supported image format. Skipping.")
             indexi-=1
