@@ -10,7 +10,8 @@ import os
 from pydantic import BaseModel
 import requests as http_requests
 import backend
-from fastapi import FastAPI, File, UploadFile, responses
+from typing import Optional
+from fastapi import FastAPI, File, UploadFile, Body, responses
 import time
 
 
@@ -18,10 +19,6 @@ load_dotenv()
 
 
 app = fastapi.FastAPI()
-
-
-class PredictionRequest(BaseModel):
-    features: list[float]
 
 
 @app.get("/")
@@ -87,6 +84,10 @@ def delete_item(class_name: str):
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 
 
+class PredictRequest(BaseModel):
+    file_path: Optional[str] = None
+
+
 @app.post("/predict")
 async def predict(image_path: str):
     try:
@@ -131,7 +132,7 @@ async def predict(image_path: str):
         )
 
 @app.post("/sort")
-def sort_images(folder_path: str):
+def sort_images(folder_path: str = Body(...)):
     try:
         backend.sort_images(folder_path)
         return fastapi.responses.JSONResponse(status_code=200, content={"status": "sorting done"})
