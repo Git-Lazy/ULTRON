@@ -371,7 +371,7 @@ def list_images_in_folder(folder_path=old_path):
 
 def sort_images(folder_path):
     try:
-        list_images_in_folder(folder_path)
+        list_images_in_folder(Path(folder_path))
     except Exception as e:
         raise ValueError(f"Error occurred while listing images: {e}")
     try:
@@ -383,10 +383,10 @@ def sort_images(folder_path):
         move_images_to_sorted_folder(images, folder_path, new_folder_path)
     except Exception as e:
         raise ValueError(f"Error occurred while moving images to sorted folder: {e}")
-    try:
-        delete_folder(folder_path)
-    except Exception as e:
-        raise ValueError(f"Error occurred while deleting old folder: {e}")
+    # try:
+    #     delete_folder(folder_path)
+    # except Exception as e:
+    #     raise ValueError(f"Error occurred while deleting old folder: {e}")
 
 # get_predictions_plural_from_model(str(old_path))
 
