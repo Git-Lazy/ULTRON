@@ -251,7 +251,7 @@ def get_predictions_plural_from_model(unsorted_folder_path, example_size=20, exa
             # print(response.text)
             # print(response.json())
             all_predictions.append(response.json())
-            if foldersOpend >= len(folderNames) and opened_files % 1000 != 0:
+            if opened_files % 1000 != 0: #foldersOpend >= len(folderNames)
                 break
         except Exception as e:
             print(f"model response: {response.text if response is not None else 'No response'}")
