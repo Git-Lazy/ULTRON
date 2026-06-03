@@ -51,6 +51,17 @@ class Model(nn.Module):
 
 
 model = Model()
+model.eval()
 model.load_state_dict(torch.load("model.pth"))
 dummy_input = torch.randn(1, 3, 128, 128)
-torch.onnx.export(model, dummy_input, "model.onnx")
+torch.onnx.export(
+    model,
+    dummy_input,
+    "model.onnx",
+    input_names=["input"],
+    output_names=["output"],
+    dynamic_axes={
+        "input": {0: "batch_size"},   # Make batch dimension dynamic
+        "output": {0: "batch_size"}   # Make output batch dimension dynamic too
+    },
+)
