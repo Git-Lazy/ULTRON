@@ -57,11 +57,13 @@ def add_class_name(class_name):
     global class_names
     if class_name not in class_names:
         class_names.append(class_name)
+        save_class_names_to_json()
 
 def delete_class_name(class_name):
     global class_names
     if class_name in class_names:
         class_names.remove(class_name)
+        save_class_names_to_json()
     delete_example_images_for_class(class_name)
     
 def delete_example_images_for_class(class_name):
@@ -229,7 +231,7 @@ def get_predictions_plural_from_model(unsorted_folder_path, example_size=20, exa
                                 continue
                             if is_image_file(image):
                                 with open(image, "rb") as f:
-                                    forModel.append((Path(image).name, f, f"image/{Path(image).suffix[1:]}"))
+                                    forModel.append((Path(image).name, f, f"image/{Path(image).suffix}"))
                                     f.close = lambda: None
                                     opened_files += 1
                                     indexF += 1
