@@ -70,6 +70,7 @@ def create_item(class_name: str):
 @app.post("/examples/")
 def create_item(example_path: str, class_name: str):
     try:
+        backend.add_class_name(class_name)
         backend.add_example_image(example_path, class_name)
         return fastapi.responses.JSONResponse(status_code=201, content={"path": example_path, "class_name": class_name})
     except Exception as e:

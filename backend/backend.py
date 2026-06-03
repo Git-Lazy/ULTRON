@@ -57,7 +57,7 @@ def add_class_name(class_name):
     global class_names
     if class_name not in class_names:
         class_names.append(class_name)
-        save_class_names_to_json()
+    save_class_names_to_json()
 
 def delete_class_name(class_name):
     global class_names
