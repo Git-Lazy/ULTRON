@@ -370,15 +370,23 @@ def list_images_in_folder(folder_path):
             continue
 
 def sort_images(folder_path):
-    list_images_in_folder(folder_path)
-    print("made it past listing images")
-    new_folder_path = f"{Path(folder_path).parent}/sorted_images/"
-    create_sorted_images_folder(new_folder_path)
-    print("made it past creating sorted images folder")
-    move_images_to_sorted_folder(images, folder_path, new_folder_path)
-    print("made it past moving images to sorted folder")
-    delete_folder(folder_path)
-    print("made it past deleting old folder")
+    try:
+        list_images_in_folder(folder_path)
+    except Exception as e:
+        raise ValueError(f"Error occurred while listing images: {e}")
+    try:
+        new_folder_path = f"{Path(folder_path).parent}/sorted_images/"
+        create_sorted_images_folder(new_folder_path)
+    except Exception as e:
+        raise ValueError(f"Error occurred while creating sorted images folder: {e}")
+    try:
+        move_images_to_sorted_folder(images, folder_path, new_folder_path)
+    except Exception as e:
+        raise ValueError(f"Error occurred while moving images to sorted folder: {e}")
+    try:
+        delete_folder(folder_path)
+    except Exception as e:
+        raise ValueError(f"Error occurred while deleting old folder: {e}")
 
 # get_predictions_plural_from_model(str(old_path))
 
