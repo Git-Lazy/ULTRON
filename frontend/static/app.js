@@ -8,7 +8,6 @@ const state = {
     classifyPath: null,
     classifySrc: null,
     folderPath: null,
-    pendingFolderFiles: [],
 };
 
 function hasNativePicker() {
@@ -444,7 +443,6 @@ function handleFolderUpload(event) {
     if (files.length === 0) {
         document.getElementById('folder-summary').textContent = 'No images found';
         state.folderPath = null;
-        state.pendingFolderFiles = [];
         const sendBtn = document.getElementById('folder-send');
         if (sendBtn) sendBtn.disabled = true;
         return;
@@ -458,8 +456,6 @@ function handleFolderUpload(event) {
         img.alt = file.name;
         grid.appendChild(img);
     }
-    // Store actual File objects so we can convert to base64 when sending
-    state.pendingFolderFiles = files;
     setFolderSelection(folderName);
     event.target.value = '';
 }
@@ -472,19 +468,28 @@ async function sendFolder() {
     if (sendBtn) sendBtn.disabled = true;
     setStatus('Sorting folder...');
     try {
-        // The backend expects the folder path as a raw JSON string
-        // (folder_path: str = Body(...)).
+        // The backend reads the folder from disk, so we send the folder path as
+        // a raw JSON string (folder_path: str = Body(...)).
+        bridgeLog(`sending /sort for ${folderPath}`);
         const res = await fetch(`${API_BASE}/sort`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(folderPath)
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const text = await res.text();
+        if (!res.ok) {
+            bridgeLog(`sort HTTP error ${res.status} body: ${text}`);
+            throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+        const data = JSON.parse(text);
         renderPredictions([`${folderPath} → ${data.status || 'sorting started'}`]);
         setStatus('System online');
     } catch (err) {
         console.error(err);
+        const detail = (err && err.message) ? err.message : String(err);
+        bridgeLog(`sendFolder error: ${detail}`);
+        // Surface the backend's actual error (returned in the 500 body).
+        renderPredictions([detail]);
         setStatus('Unable to sort folder', false);
     } finally {
         if (sendBtn) sendBtn.disabled = false;
