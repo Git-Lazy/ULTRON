@@ -371,10 +371,14 @@ def list_images_in_folder(folder_path):
 
 def sort_images(folder_path):
     list_images_in_folder(folder_path)
+    print("made it past listing images")
     new_folder_path = f"{Path(folder_path).parent}/sorted_images/"
     create_sorted_images_folder(new_folder_path)
+    print("made it past creating sorted images folder")
     move_images_to_sorted_folder(images, folder_path, new_folder_path)
+    print("made it past moving images to sorted folder")
     delete_folder(folder_path)
+    print("made it past deleting old folder")
 
 # get_predictions_plural_from_model(str(old_path))
 
