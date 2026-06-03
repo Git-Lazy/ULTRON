@@ -268,6 +268,7 @@ def create_sorted_images_folder():
         create_folder(f"{new_path}/{folderName}")
         
 def move_images_to_sorted_folder(images, old_path, new_path):
+    create_folder(new_path)
     predictions = get_predictions_plural_from_model(str(old_path), example=False)
     indexF = 0
     indexi = 0
