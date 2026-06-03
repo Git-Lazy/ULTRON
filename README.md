@@ -16,3 +16,7 @@ pyinstaller frontend.spec
 pyinstaller joiner.spec
 
 after these commands an ULTRON.exe file will be created inside of dist
+
+
+here is a link to a presentation on the application
+https://docs.google.com/presentation/d/1e2rYkxyuad1zFA_zVE0FHjuJ4A_CySaztItXfiujxgk/edit?usp=sharing
