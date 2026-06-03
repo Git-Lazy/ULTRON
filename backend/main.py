@@ -134,7 +134,7 @@ async def predict(image_path: str):
 def sort_images(folder_path: str):
     try:
         backend.sort_images(folder_path)
-        return fastapi.responses.JSONResponse(status_code=200, content={"status": "sorting started"})
+        return fastapi.responses.JSONResponse(status_code=200, content={"status": "sorting done"})
     except Exception as e:
         return fastapi.responses.JSONResponse(status_code=500, content={"error": str(e)})
 

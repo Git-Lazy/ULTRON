@@ -266,7 +266,12 @@ def create_sorted_images_folder():
     create_folder(str(new_path))
     for folderName in class_names:
         create_folder(f"{new_path}/{folderName}")
-        
+
+def create_sorted_images_folder(new_folder_path):
+    create_folder(str(new_folder_path))
+    for folderName in class_names:
+        create_folder(f"{new_folder_path}/{folderName}")
+
 def move_images_to_sorted_folder(images, old_path, new_path):
     create_folder(new_path)
     predictions = get_predictions_plural_from_model(str(old_path), example=False)
@@ -367,6 +372,7 @@ def list_images_in_folder(folder_path):
 def sort_images(folder_path):
     list_images_in_folder(folder_path)
     new_folder_path = f"{Path(folder_path).parent}/sorted_images/"
+    create_sorted_images_folder(new_folder_path)
     move_images_to_sorted_folder(images, folder_path, new_folder_path)
     delete_folder(folder_path)
 
