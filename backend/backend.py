@@ -341,13 +341,13 @@ if not Path("dataset/").exists():
     old_path = Path("sorted_images/")
     new_path = Path("dataset/")
 
-def list_images_in_folder(folder_path):
+def list_images_in_folder(folder_path=old_path):
     if not Path(folder_path).exists():
         print(f"Folder '{folder_path}' does not exist.")
         exit(42)
-    folderNames = [f.name for f in old_path.iterdir() if f.is_dir()]
+    folderNames = [f.name for f in folder_path.iterdir() if f.is_dir()]
     lastImageIndexes = {folderName: -1 for folderName in folderNames}
-    for file in old_path.iterdir():
+    for file in folder_path.iterdir():
         if not file.is_file():
             indexNO = 0
             if file.is_dir():
